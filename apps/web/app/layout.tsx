@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AppShell } from "../components/app-shell";
 
 export const metadata: Metadata = {
   title: "Pet POV AI",
@@ -12,14 +13,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className="min-h-screen bg-background font-sans antialiased">
-        <header className="border-b">
-          <div className="container mx-auto flex h-14 items-center px-4">
-            <span className="text-xl font-bold text-brand">🐾 Pet POV AI</span>
-          </div>
-        </header>
-        <main className="container mx-auto px-4 py-8">{children}</main>
+    <html lang="en" suppressHydrationWarning>
+      <body>
+        <AppShell>{children}</AppShell>
       </body>
     </html>
   );

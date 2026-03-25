@@ -1,14 +1,15 @@
-import { UploadForm } from "../../components/upload-form";
+import { SectionHeader } from "../../components/section-header";
+import { UploadCard } from "../../components/upload/upload-card";
 
 export default function UploadPage() {
   return (
-    <div className="max-w-lg mx-auto">
-      <h1 className="text-3xl font-bold mb-2">Upload Pet Video</h1>
-      <p className="text-muted-foreground mb-8">
-        Upload your pet&apos;s footage to start the AI pipeline.
-        Supported formats: MP4, MOV, WebM (max 500 MB).
-      </p>
-      <UploadForm />
+    <div className="mx-auto max-w-xl">
+      <SectionHeader
+        className="mb-8"
+        title="Upload pet footage"
+        description="Supported formats: MP4, MOV, WebM · Max 500 MB"
+      />
+      <UploadCard />
     </div>
   );
 }

@@ -1,63 +1,71 @@
 import Link from "next/link";
+import { Video, Upload, TrendingUp } from "lucide-react";
+import { SectionHeader } from "../components/section-header";
+import { StatsCard } from "../components/stats-card";
+import { EmptyState } from "../components/empty-state";
+import { Button } from "../components/ui/button";
 
-export default function HomePage() {
+/**
+ * Dashboard — creator overview page.
+ *
+ * Shows aggregate stats, recent projects, and a prominent upload CTA.
+ * TODO: Replace placeholder counts with data from Supabase queries.
+ * TODO: Replace empty state with VideoProjectCard grid once projects exist.
+ */
+export default function DashboardPage() {
   return (
-    <div className="flex flex-col items-center gap-8 py-16 text-center">
-      <h1 className="text-5xl font-extrabold tracking-tight">
-        🐾 Pet POV AI
-      </h1>
-      <p className="max-w-xl text-lg text-muted-foreground">
-        Transform raw pet camera footage into narrated, personality-driven
-        short-form videos — powered by AI.
-      </p>
+    <div className="flex flex-col gap-8">
+      {/* ── Page header ─────────────────────────────── */}
+      <SectionHeader
+        title="Dashboard"
+        description="Overview of your Pet POV AI projects"
+        action={
+          <Button asChild>
+            <Link href="/upload">
+              <Upload className="mr-2 h-4 w-4" />
+              New project
+            </Link>
+          </Button>
+        }
+      />
 
-      <div className="flex gap-4">
-        <Link
-          href="/upload"
-          className="rounded-lg bg-brand px-6 py-3 text-white font-semibold hover:bg-brand/90 transition-colors"
-        >
-          Upload Video
-        </Link>
-        <a
-          href="https://github.com/rainwaters11/Goofensmirtz_ai"
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-lg border px-6 py-3 font-semibold hover:bg-accent transition-colors"
-        >
-          GitHub
-        </a>
+      {/* ── Stats row ───────────────────────────────── */}
+      {/* TODO: Fetch real counts from Supabase */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <StatsCard
+          label="Total projects"
+          value={0}
+          icon={Video}
+          trend="Upload your first video to get started"
+        />
+        <StatsCard
+          label="Processed this week"
+          value={0}
+          icon={TrendingUp}
+        />
+        <StatsCard
+          label="Ready to export"
+          value={0}
+          icon={Video}
+        />
       </div>
 
-      <section className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-3 text-left w-full max-w-3xl">
-        {FEATURES.map((f) => (
-          <div key={f.title} className="rounded-xl border p-6">
-            <div className="text-3xl mb-2">{f.icon}</div>
-            <h3 className="font-semibold text-lg mb-1">{f.title}</h3>
-            <p className="text-sm text-muted-foreground">{f.description}</p>
-          </div>
-        ))}
-      </section>
+      {/* ── Recent projects ─────────────────────────── */}
+      <div className="flex flex-col gap-4">
+        <SectionHeader title="Recent projects" />
+
+        {/* TODO: Replace EmptyState with a grid of VideoProjectCard when data exists */}
+        <EmptyState
+          icon={Video}
+          title="No projects yet"
+          description="Upload your first pet video to start the AI pipeline — scene detection, narration, and voiceover included."
+          action={
+            <Button asChild>
+              <Link href="/upload">Upload a video</Link>
+            </Button>
+          }
+        />
+      </div>
     </div>
   );
 }
-
-const FEATURES = [
-  {
-    icon: "🎥",
-    title: "Upload Footage",
-    description:
-      "Upload any raw pet POV video. We handle encoding, storage, and scene detection automatically.",
-  },
-  {
-    icon: "🧠",
-    title: "AI Scene Analysis",
-    description:
-      "Gemini Vision extracts structured events from every scene — who, what, where, and why.",
-  },
-  {
-    icon: "🎙️",
-    title: "Persona Narration",
-    description:
-      "Choose a pet persona (Dramatic Dog, Chill Cat…) and get a hilarious voiceover script.",
-  },
-];

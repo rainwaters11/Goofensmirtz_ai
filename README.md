@@ -93,7 +93,7 @@ Save & Return Output URL
 
 | Layer     | Technology                        |
 |-----------|-----------------------------------|
-| Frontend  | Next.js 14, Tailwind CSS, shadcn/ui |
+| Frontend  | Next.js 15, Tailwind CSS, shadcn/ui |
 | Backend   | Express, TypeScript               |
 | Worker    | BullMQ, Redis                     |
 | AI        | OpenAI GPT-4o, Google Gemini      |
@@ -104,11 +104,28 @@ Save & Return Output URL
 
 ---
 
-## 📖 Architecture Rules
+## 🎨 Frontend Design Layer
 
-See [AGENTS.md](./AGENTS.md) for full architecture and agent guidelines.
+The UI is built on a four-part frontend system:
+
+### shadcn/ui — Component Foundation
+All UI primitives (Button, Card, Badge, Input, Separator) follow shadcn/ui conventions: Radix UI primitives + Tailwind class-variance-authority (CVA) variants. Components live in `apps/web/components/ui/`.
+
+### 21st.dev-Inspired Patterns — Elevated Composition
+Domain-specific components (UploadCard, VideoProjectCard, PersonaSelector, ProcessingStatusCard, EmptyState, StatsCard) follow 21st.dev composition principles: polished defaults, clean spacing hierarchies, and semantic structure. These live in `apps/web/components/` organised by feature area.
+
+### UI_UX_GUIDELINES.md — Design Reference for Coding Agents
+The authoritative design specification lives in [`docs/UI_UX_GUIDELINES.md`](./docs/UI_UX_GUIDELINES.md). It covers colour tokens, typography scales, spacing rules, component standards, and explicit instructions for AI coding agents. All UI generation must follow this file.
+
+### Remotion — Programmatic Video Rendering
+Remotion is the planned video composition layer (vertical 9:16, captions, branding overlays). The scaffold lives in `packages/video/src/remotion/`. It is excluded from the TypeScript build until `remotion` and `@remotion/core` are installed:
+```bash
+pnpm add remotion @remotion/core --filter @pet-pov/video
+```
+Remotion is NOT an AI video generation tool — it is a code-driven video renderer used to compose the final output from source video + TTS audio + subtitle segments.
 
 ---
+
 
 ## 📄 License
 
