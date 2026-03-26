@@ -1,10 +1,15 @@
 // ─── Data ownership ───────────────────────────────────────────────────────────
 // Supabase  → session state, metadata, relationships, generated text (insights,
 //             narrations, conversation turns). Source of truth for what happened.
-// Cloudinary → binary media assets (video, audio, thumbnails). All `*_url` and
-//             `*_public_id` fields in session records are references to Cloudinary.
+// Cloudinary → binary media assets (video, audio, thumbnails).
 //
-// The UI reads session state from Supabase and streams media via Cloudinary URLs.
+// Field naming convention:
+//   video_url, thumbnail_url, rendered_video_url, audio_url
+//     → Asset-role fields. Application code should read these.
+//   cloudinary_public_id
+//     → Provider-specific. Only media upload/sync services should use this.
+//
+// The UI reads session state from Supabase and streams media via session.video_url.
 // See docs/DATA_ARCHITECTURE.md for the full boundary definition.
 // ─────────────────────────────────────────────────────────────────────────────
 

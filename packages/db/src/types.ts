@@ -71,8 +71,11 @@ export interface PetInsert extends Omit<Pet, "id" | "created_at" | "updated_at">
 //               Cloudinary-hosted assets; Supabase never stores the binary itself.
 //
 // FIELD CONVENTIONS:
-//   cloudinary_public_id   — Cloudinary asset ID (used to build transforms/derivatives)
-//   cloudinary_url         — Raw uploaded session video delivery URL
+//   video_url              — Asset-role field; app code reads this to play/display the session video.
+//                           Points to the Cloudinary delivery URL in production.
+//                           In demo/dev, may point to a local public path.
+//   cloudinary_public_id   — Provider-specific reference; only media upload/sync services should
+//                           depend on this directly. Used to build Cloudinary transforms/derivatives.
 //   thumbnail_url          — Cloudinary-hosted poster frame / thumbnail
 //   rendered_video_url     — Cloudinary-hosted final rendered recap video
 //   audio_url              — Cloudinary or ElevenLabs-hosted TTS voiceover audio
@@ -92,10 +95,17 @@ export interface Session {
   pet_id: string | null;
   title: string;
 
-  // ── Cloudinary media references (Supabase stores URL, Cloudinary stores asset) ──
-  /** Delivery URL of the raw uploaded session video in Cloudinary. */
-  cloudinary_url: string;
-  /** Cloudinary public ID of the raw session video (used to build derived URLs). */
+  // ── Media references (Supabase stores URL/ID; Cloudinary stores the asset) ──
+  /**
+   * Asset-role delivery URL for the uploaded session video.
+   * Application code should always read this field — not cloudinary_public_id.
+   * In production: Cloudinary delivery URL. In demo: local public path.
+   */
+  video_url: string;
+  /**
+   * Cloudinary public ID. Only media upload/sync services should depend on this.
+   * Used to build Cloudinary transforms, derived assets, and signed URLs.
+   */
   cloudinary_public_id: string;
   /** Cloudinary-hosted poster frame / preview thumbnail. Null until generated. */
   thumbnail_url: string | null;

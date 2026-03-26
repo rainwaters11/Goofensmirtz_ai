@@ -14,7 +14,9 @@
 | Image thumbnails / poster frames | **Cloudinary** |
 | Derived/transformed video variants | **Cloudinary** |
 
-> **Rule:** Supabase stores Cloudinary public IDs and delivery URLs, **never** binary media blobs. The UI always reads session state from Supabase and uses the media URLs in those records to stream assets from Cloudinary.
+> **Rule:** Supabase stores media URL references and Cloudinary public IDs, **never** binary media blobs.
+> The UI reads session state from Supabase and uses fields like `video_url` and `thumbnail_url` to stream assets from Cloudinary.
+> Application code should consume **asset-role fields** (e.g. `video_url`). Only media upload/sync services should depend on provider-specific concepts like `cloudinary_public_id`.
 
 ---
 
@@ -43,8 +45,10 @@ sessions.pet_id                — FK → pets
 sessions.title                 — display name
 sessions.status                — pipeline state machine
 sessions.duration_seconds      — video length
-sessions.cloudinary_public_id  — ← reference to Cloudinary asset
-sessions.cloudinary_url        — ← Cloudinary delivery URL (raw upload)
+sessions.video_url             — ← asset-role field; app code reads this for playback
+                                    production: Cloudinary delivery URL
+                                    demo/dev:   local public path stand-in
+sessions.cloudinary_public_id  — ← provider-specific; only upload/sync services use this
 sessions.thumbnail_url         — ← Cloudinary poster frame URL
 sessions.rendered_video_url    — ← Cloudinary recap render URL
 sessions.audio_url             — ← TTS audio delivery URL
@@ -81,9 +85,27 @@ generated_assets.cloudinary_public_id — ← Cloudinary reference
 
 ## Field Naming Conventions
 
-- `*_url` → a full Cloudinary (or CDN) delivery URL, ready to use in `<video src>` or `<img src>`
-- `*_public_id` → Cloudinary public ID, used to build transforms (`f_auto`, `q_auto`, etc.)
-- Never use `blob://` or local `file://` URLs in Supabase records
+### Asset-role fields (read by application code)
+
+| Field | Meaning |
+|-------|---------|
+| `video_url` | Raw session video — ready to use in `<video src>` |
+| `thumbnail_url` | Poster frame / preview image |
+| `rendered_video_url` | Final recap render output |
+| `audio_url` | TTS voiceover audio |
+
+Application code should **always read asset-role fields**. These are stable across provider changes.
+
+### Provider-specific fields (only for upload/sync services)
+
+| Field | Meaning |
+|-------|---------|
+| `cloudinary_public_id` | Cloudinary asset ID — used to build transforms, signed URLs, derived variants |
+
+> **Rule:** Only the media upload route and any Cloudinary sync services should reference `cloudinary_public_id`. The session page, insights engine, and Ask My Pet features should only use `video_url`, `thumbnail_url`, etc.
+
+- `*_url` fields may be local public paths in demo/dev and Cloudinary URLs in production
+- Never store raw `blob://` or `file://` paths in Supabase records
 
 ---
 
