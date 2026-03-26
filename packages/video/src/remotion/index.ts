@@ -1,64 +1,35 @@
 /**
- * Remotion scaffold — Pet POV AI video composition
+ * Remotion entry-point types & constants for the Pet POV recap video.
  *
- * SETUP REQUIRED before using:
- *   pnpm add remotion @remotion/core --filter @pet-pov/video
- *
- * Then uncomment the Remotion imports below.
- *
- * TODO: Replace FFmpeg render with Remotion composition once integration matures.
+ * This module defines the input schema (`RecapVideoProps`) consumed by
+ * the RecapVideo composition registered in Root.tsx.
  */
 
-// import { Composition } from "remotion";
-// import { PetPovComposition, COMPOSITION_ID } from "./PetPovComposition";
-
-export const COMPOSITION_ID = "PetPovVideo";
+export const COMPOSITION_ID = "RecapVideo";
 export const COMPOSITION_WIDTH = 1080;
 export const COMPOSITION_HEIGHT = 1920; // 9:16 vertical for short-form
 export const COMPOSITION_FPS = 30;
 
-export interface CompositionProps {
-  /** Cloudinary URL of the source video */
-  videoUrl: string;
-  /** Cloudinary URL of the TTS voiceover audio */
-  audioUrl: string;
-  /** Ordered subtitle/caption segments aligned to voice timing */
-  subtitles: SubtitleSegment[];
-  /** Duration of the final output in frames */
-  durationInFrames: number;
-}
-
-export interface SubtitleSegment {
-  startFrame: number;
-  endFrame: number;
-  text: string;
-}
+/** Duration in frames for each scene segment */
+export const TITLE_CARD_DURATION = 90; // 3 seconds
+export const RECAP_LINE_DURATION = 75; // 2.5 seconds per line
+export const END_CARD_DURATION = 90; // 3 seconds
 
 /**
- * registerCompositions — call from remotion.config.ts when Remotion is installed.
+ * Props accepted by the RecapVideo composition.
  *
- * Example:
- *   import { registerCompositions } from "./src/remotion";
- *   registerCompositions();
- *
- * TODO: Wire to real video/audio/subtitle data from the pipeline.
+ * TODO: Wire these from real session data via the Experience Recap pipeline.
+ *       For now, seeded via demo-recap-props.ts for preview/demo purposes.
  */
-export function registerCompositions(): void {
-  // TODO: Uncomment once remotion is installed
-  //
-  // <Composition
-  //   id={COMPOSITION_ID}
-  //   component={PetPovComposition}
-  //   width={COMPOSITION_WIDTH}
-  //   height={COMPOSITION_HEIGHT}
-  //   fps={COMPOSITION_FPS}
-  //   durationInFrames={300}  // TODO: derive from actual video duration
-  //   defaultProps={{
-  //     videoUrl: "",
-  //     audioUrl: "",
-  //     subtitles: [],
-  //     durationInFrames: 300,
-  //   }}
-  // />
-  throw new Error("Remotion not installed. Run: pnpm add remotion @remotion/core --filter @pet-pov/video");
+export interface RecapVideoProps {
+  /** Display name of the pet */
+  petName: string;
+  /** Title of the session (e.g. "Goofinsmirtz's Wild Tuesday") */
+  sessionTitle: string;
+  /** Name of the narration persona */
+  personaName: string;
+  /** Array of short recap lines narrated from the pet's perspective */
+  recapLines: string[];
+  /** Optional audio URL — when present, the AudioBars overlay is shown */
+  audioUrl?: string;
 }

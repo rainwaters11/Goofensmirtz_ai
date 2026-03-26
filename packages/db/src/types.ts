@@ -115,6 +115,29 @@ export interface SessionEvents {
   created_at: string;
 }
 
+// ─── Insights + Recap (API response shapes) ──────────────────────────────────
+
+/**
+ * Structured insights derived from a session's events.
+ * Returned by GET /api/sessions/:id/insights.
+ */
+export interface SessionInsights {
+  keyActivities: { icon: string; label: string }[];
+  behavioralInterpretation: string;
+  safetyNotes: string;
+  activityScore: number; // 0–100
+}
+
+/**
+ * A pet-perspective narration recap for a session.
+ * Returned by GET /api/sessions/:id/recap.
+ */
+export interface PetRecap {
+  narrationScript: string;
+  personaName: string;
+  personaId: string;
+}
+
 // ─── Conversation Turn ────────────────────────────────────────────────────────
 
 /**

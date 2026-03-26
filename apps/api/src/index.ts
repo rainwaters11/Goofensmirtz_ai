@@ -6,6 +6,7 @@ import { narrateRouter } from "./routes/narrate.js";
 import { voiceRouter } from "./routes/voice.js";
 import { renderRouter } from "./routes/render.js";
 import { askRouter } from "./routes/ask.js";
+import { sessionsRouter } from "./routes/sessions.js";
 
 const app = express();
 const PORT = process.env["PORT"] ?? 4000;
@@ -27,6 +28,8 @@ app.use("/api/voice", voiceRouter);
 app.use("/api/render", renderRouter);
 // Ask My Pet mode — conversational Q&A against a session
 app.use("/api/ask", askRouter);
+// Session detail + insights + recap
+app.use("/api/sessions", sessionsRouter);
 
 // ─── Error handler ────────────────────────────────────────────────────────────
 app.use(

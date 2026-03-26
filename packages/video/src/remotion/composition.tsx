@@ -1,42 +1,121 @@
 /**
- * PetPovComposition — root Remotion composition for Pet POV AI.
+ * RecapVideo — root Remotion composition for the Pet POV AI recap video.
  *
- * Layers (bottom to top):
- *   1. VideoLayer  — source pet footage (background)
- *   2. AudioLayer  — TTS voiceover
- *   3. SubtitleLayer — captions / subtitles synced to voice
+ * Sequences scenes:
+ *   1. TitleCard    — pet name, session title, persona badge
+ *   2. RecapLine[]  — each recap text as an animated subtitle card
+ *   3. EndCard      — Pet POV AI branding & starring credit
  *
- * SETUP REQUIRED:
- *   pnpm add remotion @remotion/core --filter @pet-pov/video
- *
- * TODO: Add title card layer for intro branding
- * TODO: Add branded overlay (logo, watermark)
- * TODO: Support vertical (9:16) and square (1:1) templates
- * TODO: Replace FFmpeg render with Remotion once this is wired to pipeline
+ * AudioBars overlay is shown throughout recap lines when audioUrl is provided.
  */
 
-// import { AbsoluteFill, useVideoConfig } from "remotion";
-// import { VideoLayer } from "./layers/VideoLayer";
-// import { AudioLayer } from "./layers/AudioLayer";
-// import { SubtitleLayer } from "./layers/SubtitleLayer";
-
-import type { CompositionProps } from "./index";
+import React from "react";
+import { AbsoluteFill, Sequence, useVideoConfig, interpolate, useCurrentFrame } from "remotion";
+import type { RecapVideoProps } from "./index";
+import {
+  TITLE_CARD_DURATION,
+  RECAP_LINE_DURATION,
+  END_CARD_DURATION,
+} from "./index";
+import { TitleCard } from "./scenes/TitleCard";
+import { RecapLine } from "./scenes/RecapLine";
+import { AudioBars } from "./scenes/AudioBars";
+import { EndCard } from "./scenes/EndCard";
 
 /**
- * PetPovComposition — the main Remotion component.
- * Receives all pipeline outputs as props and composes the final video.
+ * Cross-fade transition wrapper.
+ * Fades out the last few frames of each sequence for smooth transitions.
  */
-export function PetPovComposition(props: CompositionProps) {
-  // TODO: Uncomment once remotion is installed:
-  //
-  // return (
-  //   <AbsoluteFill style={{ backgroundColor: "#000" }}>
-  //     <VideoLayer videoUrl={props.videoUrl} />
-  //     <AudioLayer audioUrl={props.audioUrl} />
-  //     <SubtitleLayer subtitles={props.subtitles} />
-  //   </AbsoluteFill>
-  // );
+const FadeTransition: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
 
-  void props; // suppress unused-vars until remotion is installed
-  throw new Error("Remotion not installed. See packages/video/src/remotion/index.ts");
-}
+  const opacity = interpolate(
+    frame,
+    [0, 8, durationInFrames - 8, durationInFrames],
+    [0, 1, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" }
+  );
+
+  return (
+    <AbsoluteFill style={{ opacity }}>
+      {children}
+    </AbsoluteFill>
+  );
+};
+
+export const RecapVideo: React.FC<RecapVideoProps> = ({
+  petName,
+  sessionTitle,
+  personaName,
+  recapLines,
+  audioUrl,
+}) => {
+  const recapCount = recapLines.length;
+  const recapTotalDuration = recapCount * RECAP_LINE_DURATION;
+
+  let currentFrame = 0;
+
+  return (
+    <AbsoluteFill style={{ backgroundColor: "#0f172a" }}>
+      {/* ── Title Card ──────────────────────────── */}
+      <Sequence from={currentFrame} durationInFrames={TITLE_CARD_DURATION} name="Title Card">
+        <FadeTransition>
+          <TitleCard
+            petName={petName}
+            sessionTitle={sessionTitle}
+            personaName={personaName}
+          />
+        </FadeTransition>
+      </Sequence>
+
+      {(() => {
+        currentFrame += TITLE_CARD_DURATION;
+        return null;
+      })()}
+
+      {/* ── Recap Lines ─────────────────────────── */}
+      {recapLines.map((line, i) => {
+        const from = TITLE_CARD_DURATION + i * RECAP_LINE_DURATION;
+        return (
+          <Sequence
+            key={i}
+            from={from}
+            durationInFrames={RECAP_LINE_DURATION}
+            name={`Recap Line ${i + 1}`}
+          >
+            <FadeTransition>
+              <RecapLine
+                line={line}
+                lineIndex={i}
+                totalLines={recapCount}
+              />
+            </FadeTransition>
+          </Sequence>
+        );
+      })}
+
+      {/* ── Audio Bars Overlay (during recap lines) ── */}
+      {audioUrl != null && (
+        <Sequence
+          from={TITLE_CARD_DURATION}
+          durationInFrames={recapTotalDuration}
+          name="Audio Bars"
+        >
+          <AudioBars />
+        </Sequence>
+      )}
+
+      {/* ── End Card ────────────────────────────── */}
+      <Sequence
+        from={TITLE_CARD_DURATION + recapTotalDuration}
+        durationInFrames={END_CARD_DURATION}
+        name="End Card"
+      >
+        <FadeTransition>
+          <EndCard petName={petName} sessionTitle={sessionTitle} />
+        </FadeTransition>
+      </Sequence>
+    </AbsoluteFill>
+  );
+};

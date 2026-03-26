@@ -9,7 +9,6 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        /* ── Mapped to CSS variables ─────────────────── */
         background:  "hsl(var(--background))",
         foreground:  "hsl(var(--foreground))",
 
@@ -49,7 +48,6 @@ const config: Config = {
         input:   "hsl(var(--input))",
         ring:    "hsl(var(--ring))",
 
-        /* ── Sidebar palette ─────────────────────────── */
         sidebar: {
           DEFAULT:    "hsl(var(--sidebar))",
           foreground: "hsl(var(--sidebar-foreground))",
@@ -70,10 +68,17 @@ const config: Config = {
       boxShadow: {
         card:  "0 1px 3px 0 rgba(0,0,0,.06), 0 1px 2px -1px rgba(0,0,0,.06)",
         panel: "0 4px 16px -2px rgba(0,0,0,.08), 0 2px 6px -2px rgba(0,0,0,.06)",
+        lift:  "0 8px 24px -4px rgba(0,0,0,.10), 0 4px 8px -4px rgba(0,0,0,.06)",
+        glow:  "0 0 0 3px rgba(249,115,22,.15), 0 4px 16px -2px rgba(249,115,22,.20)",
+        "glow-sm": "0 0 0 2px rgba(249,115,22,.12), 0 2px 8px -2px rgba(249,115,22,.15)",
       },
 
       fontFamily: {
-        sans: ["system-ui", "ui-sans-serif", "sans-serif"],
+        sans: ["Inter", "system-ui", "ui-sans-serif", "sans-serif"],
+      },
+
+      transitionDuration: {
+        "200": "200ms",
       },
     },
   },
