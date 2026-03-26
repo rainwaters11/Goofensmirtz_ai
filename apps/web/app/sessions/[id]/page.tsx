@@ -24,7 +24,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
 import type { Session, SessionEvent, SessionInsights, PetRecap } from "@pet-pov/db";
-import { fetchSession, fetchInsights, fetchRecap } from "../../../lib/api";
+import { fetchSession, fetchInsights, fetchRecap, generateVoice } from "../../../lib/api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -111,6 +111,11 @@ export default function SessionDetailPage({
   const [generating, setGenerating] = useState(false);
   const [storyGenerated, setStoryGenerated] = useState(false);
 
+  // Voice / TTS state
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [loadingAudio, setLoadingAudio] = useState(false);
+  const [audioFallback, setAudioFallback] = useState(false);
+
   // Ref to scroll to the Character / narration section after generation
   const characterSectionRef = useRef<HTMLDivElement>(null);
 
@@ -163,21 +168,36 @@ export default function SessionDetailPage({
     setActivePersonaId(personaId);
   }
 
-  // Handle Generate Story — calls recap endpoint and scrolls to narration
+  // Handle Generate Story — calls recap endpoint, then generates voice
   async function handleGenerateStory() {
     if (!sessionId || generating) return;
     setGenerating(true);
     setStoryGenerated(false);
     try {
+      // 1. Get narration text
       const result = await fetchRecap(sessionId, activePersonaId);
       setRecap(result);
       setStoryGenerated(true);
-      // Scroll to the Character / narration section
+
+      // 2. Scroll to narration section
       setTimeout(() => {
         characterSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 100);
-      // Clear the success flash after 3s
       setTimeout(() => setStoryGenerated(false), 3000);
+
+      // 3. Generate voice (non-blocking — page stays functional if this fails)
+      setLoadingAudio(true);
+      setAudioFallback(false);
+      generateVoice(sessionId, activePersonaId)
+        .then((voice) => {
+          if (voice.audioUrl) {
+            setAudioUrl(voice.audioUrl);
+          } else {
+            setAudioFallback(true);
+          }
+        })
+        .catch(() => setAudioFallback(true))
+        .finally(() => setLoadingAudio(false));
     } catch (err) {
       console.warn("[generateStory] Failed:", err);
     } finally {
@@ -474,21 +494,45 @@ export default function SessionDetailPage({
                   <Mic className="inline h-3.5 w-3.5 mr-1 mb-0.5" />
                   Voiceover
                 </p>
-                <div className="flex items-center gap-4 rounded-xl border bg-muted/30 px-5 py-4">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
-                    <Play className="h-4 w-4 text-primary ml-0.5" />
+                {loadingAudio ? (
+                  /* Loading state */
+                  <div className="flex items-center gap-3 rounded-xl border bg-muted/30 px-5 py-4">
+                    <Loader2 className="h-5 w-5 text-primary animate-spin shrink-0" />
+                    <span className="text-sm text-muted-foreground">Generating voice…</span>
                   </div>
-                  <div className="flex flex-1 items-center gap-0.5 py-1" aria-hidden>
-                    {Array.from({ length: 40 }).map((_, i) => (
-                      <div
-                        key={i}
-                        className="rounded-full bg-primary/25 w-1"
-                        style={{ height: `${8 + ((i * 7 + 3) % 20)}px` }}
-                      />
-                    ))}
+                ) : audioUrl ? (
+                  /* Real audio player */
+                  <div className="rounded-xl border bg-muted/30 px-5 py-4">
+                    <audio
+                      controls
+                      className="w-full h-10 accent-orange-500"
+                      src={audioUrl}
+                    />
                   </div>
-                  <span className="text-xs text-muted-foreground shrink-0">TTS pending</span>
-                </div>
+                ) : audioFallback ? (
+                  /* Graceful fallback */
+                  <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50/50 px-5 py-4">
+                    <Mic className="h-4 w-4 text-amber-500 shrink-0" />
+                    <span className="text-sm text-amber-700">Voice unavailable — click Generate Story to try again</span>
+                  </div>
+                ) : (
+                  /* Idle placeholder */
+                  <div className="flex items-center gap-4 rounded-xl border bg-muted/30 px-5 py-4">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10">
+                      <Play className="h-4 w-4 text-primary ml-0.5" />
+                    </div>
+                    <div className="flex flex-1 items-center gap-0.5 py-1" aria-hidden>
+                      {Array.from({ length: 40 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="rounded-full bg-primary/25 w-1"
+                          style={{ height: `${8 + ((i * 7 + 3) % 20)}px` }}
+                        />
+                      ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">Click Generate Story</span>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>

@@ -14,7 +14,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { Router, type Request, type Response, type NextFunction } from "express";
-import { generateInsightsFromEvents, buildAskMyPetSystemPrompt } from "@pet-pov/ai";
+import { generateInsightsFromEvents, buildAskMyPetSystemPrompt, buildSessionSummaryForAsk } from "@pet-pov/ai";
 import { encodeEvents } from "@pet-pov/toon";
 import {
   buildNarrationSystemPrompt,
@@ -299,7 +299,107 @@ router.get("/:id/recap", async (req, res, _next) => {
   }
 });
 
+// ─── POST /api/sessions/:id/voice ────────────────────────────────────────────
+
+/**
+ * Generates TTS audio for a session recap using ElevenLabs.
+ *
+ * DATA OWNERSHIP:
+ *   - audio_url is stored in Supabase as a reference (see Session.audio_url)
+ *   - For this demo, audio is returned as a base64 data URL (no Cloudinary upload)
+ *   - In production: upload to Cloudinary, store delivery URL in sessions.audio_url
+ *
+ * Accepts: { personaId?: string }
+ * Returns: { audioUrl: string | null; cached: boolean; fallback: boolean }
+ */
+
+// Fixed ElevenLabs demo voice — "Rachel" (neutral, expressive)
+const DEMO_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+
+// In-memory cache: "sessionId:personaId" → base64 data URL
+const audioCache = new Map<string, string>();
+
+router.post("/:id/voice", async (req, res, _next) => {
+  const { id } = req.params;
+  const personaId: string = (req.body as { personaId?: string }).personaId ?? "dramatic-dog";
+  const cacheKey = `${id}:${personaId}`;
+
+  // ── Return cached audio immediately ───────────────────────────────────────
+  if (audioCache.has(cacheKey)) {
+    res.json({ audioUrl: audioCache.get(cacheKey), cached: true, fallback: false });
+    return;
+  }
+
+  const apiKey = process.env["ELEVENLABS_API_KEY"];
+  if (!apiKey) {
+    console.warn("[voice] ELEVENLABS_API_KEY not set — returning fallback");
+    res.json({ audioUrl: null, cached: false, fallback: true });
+    return;
+  }
+
+  try {
+    // ── Generate narration text ────────────────────────────────────────────
+    const events = getMockedSessionEvents(id) ?? DEMO_SESSION_EVENTS;
+    const persona = resolvePersona(personaId);
+    let narrationScript: string;
+
+    if (process.env["OPENAI_API_KEY"]) {
+      try {
+        const toon = encodeEvents(events);
+        const systemPrompt = buildNarrationSystemPrompt(persona);
+        const userMessage = buildNarrationUserMessage(toon);
+        narrationScript = await generateChatCompletion(systemPrompt, userMessage);
+      } catch {
+        narrationScript = FALLBACK_NARRATIONS[personaId] ?? FALLBACK_NARRATIONS["dramatic-dog"]!;
+      }
+    } else {
+      narrationScript = FALLBACK_NARRATIONS[personaId] ?? FALLBACK_NARRATIONS["dramatic-dog"]!;
+    }
+
+    // Trim to ~500 chars for demo reliability and ElevenLabs cost
+    const textToSpeak = narrationScript.slice(0, 500);
+
+    // ── Call ElevenLabs TTS API ────────────────────────────────────────────
+    const ttsRes = await fetch(
+      `https://api.elevenlabs.io/v1/text-to-speech/${DEMO_VOICE_ID}`,
+      {
+        method: "POST",
+        headers: {
+          "xi-api-key": apiKey,
+          "Content-Type": "application/json",
+          Accept: "audio/mpeg",
+        },
+        body: JSON.stringify({
+          text: textToSpeak,
+          model_id: "eleven_monolingual_v1",
+          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+        }),
+      }
+    );
+
+    if (!ttsRes.ok) {
+      const errText = await ttsRes.text();
+      console.warn("[voice] ElevenLabs error:", ttsRes.status, errText);
+      res.json({ audioUrl: null, cached: false, fallback: true });
+      return;
+    }
+
+    // ── Convert audio buffer to base64 data URL ────────────────────────────
+    const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
+    const audioUrl = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
+
+    // Cache for this session run
+    audioCache.set(cacheKey, audioUrl);
+
+    res.json({ audioUrl, cached: false, fallback: false });
+  } catch (err) {
+    console.error("[voice] Unexpected error:", err);
+    res.json({ audioUrl: null, cached: false, fallback: true });
+  }
+});
+
 // ─── POST /api/sessions/:id/ask ───────────────────────────────────────────────
+
 
 /**
  * Ask My Pet — generates a simulated pet response.
@@ -308,63 +408,74 @@ router.get("/:id/recap", async (req, res, _next) => {
 router.post("/:id/ask", async (req, res, _next) => {
   try {
     const { id } = req.params;
-    const { message, personaId: bodyPersonaId } = req.body as {
+    const body = req.body as {
+      // Spec fields (Phase 3)
+      question?: string;
+      persona?: string;
+      // Legacy aliases (backward-compat)
       message?: string;
       personaId?: string;
     };
 
-    if (!message || typeof message !== "string" || message.trim().length === 0) {
-      res.status(400).json({ error: "Message is required" });
+    // Accept `question` (spec) or `message` (legacy)
+    const rawQuestion = body.question ?? body.message;
+    if (!rawQuestion || typeof rawQuestion !== "string" || rawQuestion.trim().length === 0) {
+      res.status(400).json({ error: "question is required" });
+      return;
+    }
+    const question = rawQuestion.trim();
+
+    if (question.length > 1000) {
+      res.status(400).json({ error: "question too long (max 1000 characters)" });
       return;
     }
 
-    if (message.length > 1000) {
-      res.status(400).json({ error: "Message too long (max 1000 characters)" });
-      return;
-    }
-
-    const personaId = bodyPersonaId ?? "dramatic-dog";
+    // Accept `persona` (spec) or `personaId` (legacy)
+    const personaId = body.persona ?? body.personaId ?? "dramatic-dog";
     const persona = resolvePersona(personaId);
 
+    // ── Resolve session events ──────────────────────────────────────────────
     const events = getMockedSessionEvents(id);
     if (!events) {
       res.status(404).json({ error: "Session events not found" });
       return;
     }
 
+    // ── Summarize session context ───────────────────────────────────────────
+    const petName = id === DEMO_SESSION_ID ? "Biscuit" : "Your Pet";
+    const sessionSummary = buildSessionSummaryForAsk(petName, events);
+
+    // ── Build prompt ────────────────────────────────────────────────────────
     const insights: SessionInsights = generateInsightsFromEvents(events);
     const toon = encodeEvents(events);
-    const sessionSummary = `${DEMO_SESSION.title} — ${Math.round(DEMO_SESSION.duration_seconds! / 60)}m session`;
+    const systemPrompt = buildAskMyPetSystemPrompt(persona, sessionSummary, insights, toon);
 
+    // ── Call OpenAI (with fallback) ─────────────────────────────────────────
     let petResponse: string;
 
     if (process.env["OPENAI_API_KEY"]) {
       try {
-        const systemPrompt = buildAskMyPetSystemPrompt(
-          persona,
-          sessionSummary,
-          insights,
-          toon
-        );
-        petResponse = await generateChatCompletion(systemPrompt, message.trim());
+        petResponse = await generateChatCompletion(systemPrompt, question);
       } catch (llmError) {
-        console.warn("[ask] LLM generation failed, using fallback:", llmError);
-        petResponse = getFallbackResponse(personaId, message);
+        console.warn("[sessions/:id/ask] LLM generation failed, using fallback:", llmError);
+        petResponse = getFallbackResponse(personaId, question);
       }
     } else {
-      petResponse = getFallbackResponse(personaId, message);
+      console.info("[sessions/:id/ask] No OPENAI_API_KEY — using fallback response");
+      petResponse = getFallbackResponse(personaId, question);
     }
 
+    // ── Return response ─────────────────────────────────────────────────────
     res.json({
       response: petResponse,
       personaName: persona.name,
     });
   } catch (err) {
-    console.error("[ask] Unexpected error, returning fallback response:", err);
-    const personaId = (req.body?.personaId as string) ?? "dramatic-dog";
-    const message = (req.body?.message as string) ?? "";
+    console.error("[sessions/:id/ask] Unexpected error, returning fallback response:", err);
+    const personaId = (req.body?.persona ?? req.body?.personaId ?? "dramatic-dog") as string;
+    const question = (req.body?.question ?? req.body?.message ?? "") as string;
     res.json({
-      response: getFallbackResponse(personaId, message),
+      response: getFallbackResponse(personaId, question),
       personaName: resolvePersona(personaId).name,
     });
   }

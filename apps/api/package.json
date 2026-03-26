@@ -13,12 +13,13 @@
   "dependencies": {
     "@pet-pov/ai": "workspace:*",
     "@pet-pov/db": "workspace:*",
+    "@pet-pov/personas": "workspace:*",
     "@pet-pov/toon": "workspace:*",
     "@pet-pov/video": "workspace:*",
-    "@pet-pov/personas": "workspace:*",
     "bullmq": "^5.7.0",
     "cloudinary": "^2.2.0",
     "cors": "^2.8.5",
+    "elevenlabs": "^1.59.0",
     "express": "^4.19.2",
     "multer": "^2.1.1",
     "zod": "^3.23.0"
