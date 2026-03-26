@@ -1,0 +1,28 @@
+{
+  "name": "@pet-pov/ai",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.12.0",
+    "@pet-pov/db": "workspace:*",
+    "openai": "^4.47.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}
