@@ -62,6 +62,21 @@ export interface PetInsert extends Omit<Pet, "id" | "created_at" | "updated_at">
 }
 
 // ─── Session ──────────────────────────────────────────────────────────────────
+//
+// DATA OWNERSHIP:
+//   Supabase  → source of truth for all session state, metadata, and relationships.
+//               Stores references (URLs, public IDs) to media but NOT the binary files.
+//   Cloudinary → source of truth for all actual media assets.
+//               The fields below that end in `_url` or `_public_id` point to
+//               Cloudinary-hosted assets; Supabase never stores the binary itself.
+//
+// FIELD CONVENTIONS:
+//   cloudinary_public_id   — Cloudinary asset ID (used to build transforms/derivatives)
+//   cloudinary_url         — Raw uploaded session video delivery URL
+//   thumbnail_url          — Cloudinary-hosted poster frame / thumbnail
+//   rendered_video_url     — Cloudinary-hosted final rendered recap video
+//   audio_url              — Cloudinary or ElevenLabs-hosted TTS voiceover audio
+//   // TODO: add highlight_clip_url (short-form clip) when that feature ships
 
 /**
  * A recorded pet camera session uploaded by the user.
@@ -76,8 +91,19 @@ export interface Session {
   owner_id: string;
   pet_id: string | null;
   title: string;
+
+  // ── Cloudinary media references (Supabase stores URL, Cloudinary stores asset) ──
+  /** Delivery URL of the raw uploaded session video in Cloudinary. */
   cloudinary_url: string;
+  /** Cloudinary public ID of the raw session video (used to build derived URLs). */
   cloudinary_public_id: string;
+  /** Cloudinary-hosted poster frame / preview thumbnail. Null until generated. */
+  thumbnail_url: string | null;
+  /** Cloudinary-hosted final rendered recap video. Null until render pipeline runs. */
+  rendered_video_url: string | null;
+  /** Hosted TTS voiceover audio URL (Cloudinary or ElevenLabs). Null until generated. */
+  audio_url: string | null;
+
   duration_seconds: number | null;
   status: SessionStatus;
   /** Which pipeline modes have been run on this session. */

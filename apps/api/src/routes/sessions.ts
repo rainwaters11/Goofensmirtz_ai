@@ -1,3 +1,13 @@
+// ─── Data ownership ───────────────────────────────────────────────────────────
+// Supabase  → session state, metadata, relationships, generated text (insights,
+//             narrations, conversation turns). Source of truth for what happened.
+// Cloudinary → binary media assets (video, audio, thumbnails). All `*_url` and
+//             `*_public_id` fields in session records are references to Cloudinary.
+//
+// The UI reads session state from Supabase and streams media via Cloudinary URLs.
+// See docs/DATA_ARCHITECTURE.md for the full boundary definition.
+// ─────────────────────────────────────────────────────────────────────────────
+
 import { Router, type Request, type Response, type NextFunction } from "express";
 import { generateInsightsFromEvents, buildAskMyPetSystemPrompt } from "@pet-pov/ai";
 import { encodeEvents } from "@pet-pov/toon";
