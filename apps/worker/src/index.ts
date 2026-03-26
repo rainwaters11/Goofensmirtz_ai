@@ -5,11 +5,14 @@ import { toonConversionJob } from "./jobs/toon-conversion.js";
 import { narrationJob } from "./jobs/narration.js";
 import { voiceSynthesisJob } from "./jobs/voice-synthesis.js";
 import { videoRenderJob } from "./jobs/video-render.js";
+import { conversationGenerationJob } from "./jobs/conversation-generation.js";
 
 // ─── Queue Names ──────────────────────────────────────────────────────────────
 export const QUEUE_PIPELINE = "pipeline";
 
 // ─── Job Name Constants ───────────────────────────────────────────────────────
+
+// Experience Recap pipeline jobs
 export const JOB_SCENE_EXTRACTION = "scene-extraction";
 export const JOB_EVENT_GENERATION = "event-generation";
 export const JOB_TOON_CONVERSION = "toon-conversion";
@@ -17,17 +20,23 @@ export const JOB_NARRATION = "narration";
 export const JOB_VOICE_SYNTHESIS = "voice-synthesis";
 export const JOB_VIDEO_RENDER = "video-render";
 
+// Ask My Pet pipeline jobs
+export const JOB_CONVERSATION_GENERATION = "conversation-generation";
+
 const REDIS_URL = process.env["REDIS_URL"] ?? "redis://localhost:6379";
 const CONCURRENCY = parseInt(process.env["WORKER_CONCURRENCY"] ?? "4", 10);
 
 // ─── Job Dispatcher ───────────────────────────────────────────────────────────
 const jobDispatcher: Record<string, (job: Job) => Promise<unknown>> = {
+  // Experience Recap
   [JOB_SCENE_EXTRACTION]: sceneExtractionJob,
   [JOB_EVENT_GENERATION]: eventGenerationJob,
   [JOB_TOON_CONVERSION]: toonConversionJob,
   [JOB_NARRATION]: narrationJob,
   [JOB_VOICE_SYNTHESIS]: voiceSynthesisJob,
   [JOB_VIDEO_RENDER]: videoRenderJob,
+  // Ask My Pet
+  [JOB_CONVERSATION_GENERATION]: conversationGenerationJob,
 };
 
 // ─── Worker ───────────────────────────────────────────────────────────────────

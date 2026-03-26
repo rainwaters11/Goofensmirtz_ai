@@ -9,15 +9,22 @@ import { buildNarrationSystemPrompt, buildNarrationUserMessage } from "@pet-pov/
 const router = Router();
 
 const NarrateBodySchema = z.object({
-  videoId: z.string().uuid(),
+  /** sessionId is the canonical field for new code. */
+  sessionId: z.string().uuid().optional(),
+  /** videoId is accepted for backwards compatibility with existing integrations. */
+  videoId: z.string().uuid().optional(),
   personaId: z.string().uuid(),
+}).refine((d) => d.sessionId != null || d.videoId != null, {
+  message: "Either sessionId or videoId must be provided",
 });
 
 /**
  * POST /api/narrate
  *
- * Generates a narration script for a video using the specified persona.
- * Requires the video's events to have already been extracted (step 4 of pipeline).
+ * Generates a narration script for a session using the specified persona.
+ * Requires the session's events to have already been extracted (step 4 of pipeline).
+ *
+ * Accepts `sessionId` (preferred) or legacy `videoId`.
  *
  * Returns: { script }
  */
@@ -29,10 +36,12 @@ router.post("/", async (req, res, next) => {
       return;
     }
 
-    const { videoId, personaId } = body.data;
+    // Normalise: prefer sessionId, fall back to videoId for legacy callers
+    const sessionId = body.data.sessionId ?? body.data.videoId;
+    const { personaId } = body.data;
     const db = getSupabaseServiceClient();
 
-    // TODO: Fetch events for the video from the database
+    // TODO: Fetch events for the session from the database (session_events table)
     // TODO: Encode events using encodeEvents() from @pet-pov/toon
     // TODO: Fetch persona using getPersonaById()
     // TODO: Build prompts and call generateChatCompletion()
@@ -40,7 +49,7 @@ router.post("/", async (req, res, next) => {
 
     res.status(202).json({
       message: "Narration endpoint ready — implementation pending",
-      videoId,
+      sessionId,
       personaId,
     });
   } catch (err) {

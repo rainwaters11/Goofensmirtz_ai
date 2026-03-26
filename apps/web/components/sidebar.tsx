@@ -15,7 +15,7 @@ import { Separator } from "./ui/separator";
 
 const NAV_ITEMS = [
   { href: "/",          label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/projects",  label: "Projects",   icon: FolderOpen },
+  { href: "/sessions",  label: "Sessions",   icon: FolderOpen },
   { href: "/upload",    label: "Upload",     icon: Upload },
   { href: "/personas",  label: "Personas",   icon: Theater },
   { href: "/settings",  label: "Settings",   icon: Settings },

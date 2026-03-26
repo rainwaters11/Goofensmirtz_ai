@@ -5,8 +5,13 @@ import { z } from "zod";
 const router = Router();
 
 const ProcessBodySchema = z.object({
-  videoId: z.string().uuid(),
+  /** sessionId is the canonical field for new code (Experience Recap mode). */
+  sessionId: z.string().uuid().optional(),
+  /** videoId is accepted for backwards compatibility with existing integrations. */
+  videoId: z.string().uuid().optional(),
   personaId: z.string().uuid(),
+}).refine((d) => d.sessionId != null || d.videoId != null, {
+  message: "Either sessionId or videoId must be provided",
 });
 
 // TODO: Connect to Redis and initialise the pipeline queue
@@ -15,8 +20,10 @@ const ProcessBodySchema = z.object({
 /**
  * POST /api/process
  *
- * Triggers the full pipeline for a given video.
+ * Triggers the Experience Recap pipeline for a given session.
  * Enqueues a job in the worker queue — does NOT run synchronously.
+ *
+ * Accepts `sessionId` (preferred) or legacy `videoId`.
  *
  * Returns: { jobId }
  */
@@ -28,14 +35,16 @@ router.post("/", async (req, res, next) => {
       return;
     }
 
-    const { videoId, personaId } = body.data;
+    // Normalise: prefer sessionId, fall back to videoId for legacy callers
+    const sessionId = body.data.sessionId ?? body.data.videoId;
+    const { personaId } = body.data;
 
     // TODO: Enqueue the pipeline job
-    // const job = await pipelineQueue.add("run-pipeline", { videoId, personaId });
+    // const job = await pipelineQueue.add("run-pipeline", { sessionId, personaId });
 
     res.status(202).json({
       message: "Pipeline trigger ready — queue integration pending",
-      videoId,
+      sessionId,
       personaId,
     });
   } catch (err) {

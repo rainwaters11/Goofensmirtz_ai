@@ -1,6 +1,20 @@
 # 🐾 Pet POV AI
 
-Pet POV AI is an end-to-end AI content engine that transforms raw pet camera footage into narrated, personality-driven short-form videos.
+Pet POV AI is an **AI-powered pet perspective platform** that transforms recorded pet camera footage into character-driven creative experiences — narrated recap videos and simulated pet conversations.
+
+> See [PRODUCT.md](./PRODUCT.md) for full vision, user flows, and non-goals.
+
+---
+
+## 🎬 Two MVP Modes
+
+### Mode 1 — Experience Recap
+Upload wearable pet camera footage → AI extracts events → generates a narrated short-form video from the pet's point of view.
+
+### Mode 2 — Ask My Pet
+Select a processed session → ask questions like *"Where did you go?"* → AI generates a simulated pet response in voice and text using session events and the pet's persona.
+
+> **Important:** This is creative character simulation — not animal translation.
 
 ---
 
@@ -9,7 +23,7 @@ Pet POV AI is an end-to-end AI content engine that transforms raw pet camera foo
 ```
 pet-pov-ai/
 ├── apps/
-│   ├── web/        Next.js frontend (upload UI, preview player)
+│   ├── web/        Next.js frontend (upload UI, session viewer, ask interface)
 │   ├── api/        Express API (thin route handlers, delegates to packages)
 │   └── worker/     BullMQ worker (all heavy pipeline jobs)
 ├── packages/
@@ -17,10 +31,12 @@ pet-pov-ai/
 │   ├── toon/       JSON ↔ TOON encoder/decoder
 │   ├── video/      FFmpeg wrapper, scene extraction
 │   ├── personas/   Persona types, templates, voice mappings
-│   └── db/         Supabase client, typed queries
+│   └── db/         Supabase client, typed queries, domain models
 ├── infra/          Supabase migrations, Cloudinary config
+├── docs/           UI/UX guidelines
 ├── specs/          End-to-end pipeline tests
-├── AGENTS.md       AI agent rules and architecture guidance
+├── AGENTS.md       AI agent rules, product modes, MVP boundaries
+├── PRODUCT.md      Product vision, user flows, non-goals
 └── .env.example    Environment variable reference
 ```
 
@@ -63,16 +79,18 @@ cd apps/worker && pnpm dev
 
 ---
 
-## 🧠 Pipeline
+## 🧠 Pipelines
+
+### Experience Recap Pipeline
 
 ```
-Upload Video
+Upload Session
     ↓
 Store in Cloudinary
     ↓
 Extract Scenes (FFmpeg / PySceneDetect)
     ↓
-Generate Structured Events (Gemini Vision)
+Generate Structured SessionEvents (Gemini Vision)
     ↓
 Store Events as JSON
     ↓
@@ -84,7 +102,23 @@ Generate TTS Voiceover
     ↓
 Render Final Video (FFmpeg / Remotion)
     ↓
-Save & Return Output URL
+Save GeneratedAsset & Return Output URL
+```
+
+### Ask My Pet Pipeline
+
+```
+User Question + Session ID
+    ↓
+Fetch SessionEvents → Encode to TOON
+    ↓
+Load Conversation History + Persona
+    ↓
+Generate Simulated Pet Response (OpenAI)
+    ↓
+Synthesize TTS Audio
+    ↓
+Store ConversationTurn & Return Response
 ```
 
 ---
@@ -112,7 +146,7 @@ The UI is built on a four-part frontend system:
 All UI primitives (Button, Card, Badge, Input, Separator) follow shadcn/ui conventions: Radix UI primitives + Tailwind class-variance-authority (CVA) variants. Components live in `apps/web/components/ui/`.
 
 ### 21st.dev-Inspired Patterns — Elevated Composition
-Domain-specific components (UploadCard, VideoProjectCard, PersonaSelector, ProcessingStatusCard, EmptyState, StatsCard) follow 21st.dev composition principles: polished defaults, clean spacing hierarchies, and semantic structure. These live in `apps/web/components/` organised by feature area.
+Domain-specific components (UploadCard, SessionCard, PersonaSelector, ProcessingStatusCard, EmptyState, StatsCard) follow 21st.dev composition principles: polished defaults, clean spacing hierarchies, and semantic structure. These live in `apps/web/components/` organised by feature area.
 
 ### UI_UX_GUIDELINES.md — Design Reference for Coding Agents
 The authoritative design specification lives in [`docs/UI_UX_GUIDELINES.md`](./docs/UI_UX_GUIDELINES.md). It covers colour tokens, typography scales, spacing rules, component standards, and explicit instructions for AI coding agents. All UI generation must follow this file.
@@ -125,7 +159,6 @@ pnpm add remotion @remotion/core --filter @pet-pov/video
 Remotion is NOT an AI video generation tool — it is a code-driven video renderer used to compose the final output from source video + TTS audio + subtitle segments.
 
 ---
-
 
 ## 📄 License
 

@@ -2,28 +2,61 @@
 
 ## Project: Pet POV AI
 
-Pet POV AI is an AI-powered content engine that transforms raw pet POV video footage into narrated, personality-driven short-form videos.
+Pet POV AI is an **AI-powered pet perspective platform** that transforms recorded pet camera footage into character-driven creative experiences.
 
-This project uses a modular, multi-model pipeline and TOON-based prompt optimization to generate scalable, humorous, and creator-ready content.
+The platform operates in two MVP modes:
+
+### Mode 1: Experience Recap
+User uploads wearable pet camera footage → system extracts events → generates narrated short-form video from the pet's point of view.
+
+### Mode 2: Ask My Pet
+User selects a processed session → asks questions → system generates a simulated pet response (text + voice) using session events, persona memory, and conversation history.
+
+> See [PRODUCT.md](./PRODUCT.md) for full product vision, user flows, and non-goals.
 
 ---
 
-## 🧠 Core System Flow
+## ⛔ MVP Boundaries (All Agents Must Respect)
 
-All agents must follow this pipeline:
+- **No live streaming** — recorded session upload only
+- **No real-time inference** — all processing is async via the worker queue
+- **No claim of animal translation** — this is character simulation, not science
+- **No multi-pet sessions for MVP** — one pet per session
+- **No social feed** — creator exports their own content
 
-1. Upload video
+These boundaries are permanent constraints for MVP scope. Do NOT build features that cross them.
+
+---
+
+## 🧠 Core System Flows
+
+### Experience Recap Pipeline
+
+All agents must follow this pipeline for recap mode:
+
+1. Upload session video
 2. Store media (Cloudinary)
 3. Extract scenes (FFmpeg / PySceneDetect)
-4. Generate structured events (Gemini or vision model)
+4. Generate structured `SessionEvent[]` (Gemini Vision)
 5. Store events as JSON
 6. Convert JSON → TOON
-7. Generate narration (OpenAI)
-8. Generate voice (TTS)
+7. Generate narration script (OpenAI + Persona)
+8. Generate TTS voiceover
 9. Render final video (FFmpeg / Remotion)
-10. Save and return final output
+10. Save `GeneratedAsset` and return output URL
 
 DO NOT skip steps or merge responsibilities across layers.
+
+### Ask My Pet Pipeline
+
+1. Receive user question + `sessionId` + `personaId`
+2. Fetch `SessionEvent[]` for the session
+3. Encode events to TOON (context window)
+4. Fetch conversation history (`ConversationTurn[]`)
+5. Build system prompt using persona rules
+6. Generate response (OpenAI GPT-4o)
+7. Synthesize TTS response audio
+8. Store `ConversationTurn` and return response + audio URL
 
 ---
 
@@ -53,16 +86,31 @@ DO NOT skip steps or merge responsibilities across layers.
 
 ---
 
+## 🗄️ Domain Model Reference
+
+| Type | Table | Description |
+|---|---|---|
+| `Pet` | `pets` | Pet profile (name, species, photo) |
+| `Persona` | `personas` | Narration personality and voice mapping |
+| `Session` | `sessions` | A recorded pet camera session |
+| `SessionEvent` | (JSONB in `sessions`) | AI-extracted event from a session |
+| `ConversationTurn` | `conversation_turns` | A Q&A turn in Ask My Pet mode |
+| `GeneratedAsset` | `generated_assets` | A rendered video, audio clip, or script |
+
+The legacy `Video` / `SceneEvent` types in `packages/db/src/types.ts` remain for backwards compatibility. Prefer `Session` / `SessionEvent` in all new code.
+
+---
+
 ## 🤖 AI Usage Rules
 
 - NEVER combine perception and narration in one step
 - Vision models ONLY generate structured event data
-- Narration models ONLY generate scripts
+- Narration models ONLY generate scripts or conversational responses
 
 Always follow:
 
 ```
-Vision → JSON → TOON → Narration
+Vision → JSON → TOON → Narration / Response
 ```
 
 ---
@@ -78,7 +126,7 @@ Vision → JSON → TOON → Narration
 
 ## 🎭 Persona System Rules
 
-- Every narration must use a persona
+- Every narration and Ask My Pet response must use a persona
 - Personas must be reusable and stored in DB
 - Personas define:
   - tone
@@ -103,11 +151,12 @@ Do not hardcode personality in prompts
 
 All endpoints must be thin and delegate logic:
 
-- `/api/upload` → upload only
-- `/api/process` → trigger pipeline
+- `/api/upload` → upload session media only
+- `/api/process` → trigger Experience Recap pipeline
 - `/api/narrate` → narration only
-- `/api/voice` → voice only
-- `/api/render` → final video
+- `/api/voice` → voice synthesis only
+- `/api/render` → final video render
+- `/api/ask` → Ask My Pet conversational endpoint
 
 Do not mix responsibilities
 
@@ -155,6 +204,7 @@ Never hardcode secrets
 - Do not tightly couple AI providers
 - Do not mix UI and backend logic
 - Do not assume synchronous processing
+- Do not claim or imply real animal translation in any UI copy
 
 ---
 
@@ -162,10 +212,11 @@ Never hardcode secrets
 
 Ship a working MVP that:
 
-- Accepts a pet video
-- Generates structured events
-- Produces a funny narrated script
-- Generates voiceover
-- Outputs a final short-form video
+- Accepts a recorded pet session
+- Generates structured events via AI vision
+- Produces a funny narrated recap video (Experience Recap)
+- Simulates a pet's conversational response to user questions (Ask My Pet)
+- Generates voiceover for both modes
+- Outputs shareable creative content
 
 Focus on execution, clarity, and speed.
