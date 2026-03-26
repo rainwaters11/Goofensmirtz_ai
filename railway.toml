@@ -1,0 +1,7 @@
+[project]
+name = "pet-pov-ai"
+
+[services.api]
+root = "."
+build = "pnpm install && pnpm turbo run build"
+start = "pnpm --filter @pet-pov/api start"
