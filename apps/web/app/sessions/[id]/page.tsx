@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -107,6 +107,13 @@ export default function SessionDetailPage({
   // Persona state
   const [activePersonaId, setActivePersonaId] = useState("dramatic-dog");
 
+  // Generate Story state
+  const [generating, setGenerating] = useState(false);
+  const [storyGenerated, setStoryGenerated] = useState(false);
+
+  // Ref to scroll to the Character / narration section after generation
+  const characterSectionRef = useRef<HTMLDivElement>(null);
+
   // Error state
   const [error, setError] = useState<string | null>(null);
 
@@ -154,6 +161,28 @@ export default function SessionDetailPage({
   function handlePersonaSwitch(personaId: string) {
     if (personaId === activePersonaId) return;
     setActivePersonaId(personaId);
+  }
+
+  // Handle Generate Story — calls recap endpoint and scrolls to narration
+  async function handleGenerateStory() {
+    if (!sessionId || generating) return;
+    setGenerating(true);
+    setStoryGenerated(false);
+    try {
+      const result = await fetchRecap(sessionId, activePersonaId);
+      setRecap(result);
+      setStoryGenerated(true);
+      // Scroll to the Character / narration section
+      setTimeout(() => {
+        characterSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+      // Clear the success flash after 3s
+      setTimeout(() => setStoryGenerated(false), 3000);
+    } catch (err) {
+      console.warn("[generateStory] Failed:", err);
+    } finally {
+      setGenerating(false);
+    }
   }
 
   // ── Derived values ────────────────────────────────────────────────────────
@@ -232,12 +261,23 @@ export default function SessionDetailPage({
 
           {/* Generate Story CTA */}
           <div className="flex shrink-0 flex-col gap-2">
-            <Button size="xl" className="animate-glow-pulse">
-              <Sparkles className="mr-2 h-5 w-5" />
-              Generate Story
+            <Button
+              size="xl"
+              className="animate-glow-pulse"
+              onClick={handleGenerateStory}
+              disabled={generating || loadingSession}
+            >
+              {generating ? (
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              ) : storyGenerated ? (
+                <CheckCircle2 className="mr-2 h-5 w-5" />
+              ) : (
+                <Sparkles className="mr-2 h-5 w-5" />
+              )}
+              {generating ? "Generating…" : storyGenerated ? "Story Ready!" : "Generate Story"}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
-              Creates a narrated recap video
+              {storyGenerated ? "Scroll down to read the narration" : "Creates a narrated recap video"}
             </p>
           </div>
         </div>
@@ -257,14 +297,25 @@ export default function SessionDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              <div className="flex aspect-video items-center justify-center rounded-xl bg-zinc-950 relative overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-black/30" />
-                <div className="relative flex flex-col items-center gap-3 text-white">
-                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20 shadow-glow backdrop-blur-sm hover:bg-white/20 transition-all duration-200 cursor-pointer">
-                    <Play className="h-7 w-7 fill-white text-white ml-1" strokeWidth={0} />
+              <div className="rounded-xl bg-zinc-950 relative overflow-hidden">
+                <video
+                  className="w-full rounded-xl"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  poster=""
+                >
+                  <source src="/demo/catpov.mp4" type="video/mp4" />
+                  {/* Fallback if video cannot load */}
+                  <div className="flex aspect-video items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 text-white">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
+                        <Play className="h-7 w-7 fill-white text-white ml-1" strokeWidth={0} />
+                      </div>
+                      <p className="text-sm text-white/60">Video unavailable</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-white/60">Preview available after render</p>
-                </div>
+                </video>
               </div>
             </CardContent>
           </Card>
@@ -342,7 +393,7 @@ export default function SessionDetailPage({
           </Card>
 
           {/* 3. Character panel */}
-          <Card>
+          <Card ref={characterSectionRef}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-base font-bold">
                 <Theater className="h-4 w-4 text-primary" />
@@ -506,9 +557,20 @@ export default function SessionDetailPage({
               </p>
             </div>
 
-            <Button size="lg" className="w-full">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generate Story
+            <Button
+              size="lg"
+              className="w-full"
+              onClick={handleGenerateStory}
+              disabled={generating || loadingSession}
+            >
+              {generating ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : storyGenerated ? (
+                <CheckCircle2 className="mr-2 h-4 w-4" />
+              ) : (
+                <Sparkles className="mr-2 h-4 w-4" />
+              )}
+              {generating ? "Generating…" : storyGenerated ? "Story Ready!" : "Generate Story"}
             </Button>
           </div>
         </div>
