@@ -201,6 +201,13 @@ function getFallbackResponse(personaId: string, message: string): string {
   return responses["default"]!;
 }
 
+// ─── GET /api/sessions/demo → canonical demo session ─────────────────────────
+
+router.get("/demo", (_req, res) => {
+  // 302 redirect to the canonical demo session
+  res.redirect(302, `/api/sessions/${DEMO_SESSION_ID}`);
+});
+
 // ─── GET /api/sessions/:id ────────────────────────────────────────────────────
 
 router.get("/:id", async (req, res, _next) => {
@@ -482,13 +489,22 @@ router.post("/:id/ask", async (req, res, _next) => {
     }
 
     // ── Summarize session context ───────────────────────────────────────────
-    const petName = id === DEMO_SESSION_ID ? "Biscuit" : "Your Pet";
+    // Demo pet: Goofinsmirtz the cat
+    const petName = id === DEMO_SESSION_ID ? "Goofinsmirtz" : "Your Pet";
+    const petSpecies = id === DEMO_SESSION_ID ? "cat" : "pet";
     const sessionSummary = buildSessionSummaryForAsk(petName, events);
 
     // ── Build prompt ────────────────────────────────────────────────────────
     const insights: SessionInsights = generateInsightsFromEvents(events);
     const toon = encodeEvents(events);
-    const systemPrompt = buildAskMyPetSystemPrompt(persona, sessionSummary, insights, toon);
+    const systemPrompt = buildAskMyPetSystemPrompt(
+      persona,
+      sessionSummary,
+      insights,
+      toon,
+      petName,
+      petSpecies
+    );
 
     // ── Call OpenAI (with fallback) ─────────────────────────────────────────
     let petResponse: string;

@@ -6,20 +6,34 @@ import type { Persona, SessionEvent, SessionInsights } from "@pet-pov/db";
  * Unlike `buildNarrationSystemPrompt` (monologue-style), this is a Q&A prompt.
  * The AI responds as the pet in first-person, grounded in session context.
  *
- * @param persona     The narration personality to inhabit
- * @param sessionSummary  One-line session description (e.g. "Biscuit's Wild Tuesday — 1h 42m")
- * @param insights    Structured insights from the session
- * @param toon        TOON-encoded session events string
+ * @param persona        The narration personality to inhabit
+ * @param sessionSummary One-line session description
+ * @param insights       Structured insights from the session
+ * @param toon           TOON-encoded session events string
+ * @param petName        Pet name (e.g. "Goofinsmirtz") — injected to prevent hallucination
+ * @param species        Pet species (e.g. "cat") — injected to prevent cat/dog confusion
  */
 export function buildAskMyPetSystemPrompt(
   persona: Persona,
   sessionSummary: string,
   insights: SessionInsights,
-  toon: string
+  toon: string,
+  petName?: string,
+  species?: string
 ): string {
   const activitiesList = insights.keyActivities
     .map((a) => `- ${a.icon} ${a.label}`)
     .join("\n");
+
+  const identityBlock =
+    petName && species
+      ? [
+          "",
+          "── YOUR IDENTITY (critical) ──",
+          `Your name is ${petName}. You are a ${species}.`,
+          `Never refer to yourself as any other species. If you are a cat, never say "dog". Always call yourself ${petName}.`,
+        ]
+      : [];
 
   return [
     `You ARE a pet. You are answering your human's questions about your day.`,
@@ -27,6 +41,7 @@ export function buildAskMyPetSystemPrompt(
     "",
     "Your character rules:",
     ...persona.rules.map((r: string) => `- ${r}`),
+    ...identityBlock,
     "",
     "── SESSION CONTEXT ──",
     `Session: ${sessionSummary}`,

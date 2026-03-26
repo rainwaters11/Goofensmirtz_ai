@@ -2,7 +2,11 @@ import { Router } from "express";
 import { z } from "zod";
 import { getSupabaseServiceClient, getPersonaById } from "@pet-pov/db";
 import { encodeEvents } from "@pet-pov/toon";
-import { generateChatCompletion, buildNarrationSystemPrompt, buildNarrationUserMessage } from "@pet-pov/ai";
+import {
+  generateChatCompletion,
+  buildNarrationSystemPrompt,
+  buildNarrationUserMessage,
+} from "@pet-pov/ai";
 
 const router = Router();
 
@@ -20,105 +24,113 @@ const NarrateBodySchema = z.object({
  * POST /api/narrate
  *
  * Generates a narration script for a session using the specified persona.
- * Requires the session's events to have already been extracted (Step 4 of pipeline).
+ * Injects pet name + species into the system prompt so the LLM never
+ * confuses a cat for a dog (or vice versa).
  *
  * INPUT:
- *   - body.sessionId: UUID of the session (preferred) — must have status >= "events_extracted"
+ *   - body.sessionId: UUID of the session (preferred)
  *   - body.videoId:   UUID (legacy alias for sessionId)
- *   - body.personaId: UUID of the persona to use for narration
+ *   - body.personaId: UUID of the persona to use
  *
  * OUTPUT:
- *   - 200 { script: string }
- *
- * SERVICES (in order):
- *   1. Supabase: fetch SessionEvent[] from `session_events` table
- *      SERVICE: db.from("session_events").select("events").eq("session_id", sessionId).single()
- *   2. @pet-pov/toon: encodeEvents(events) → TOON string (in-memory, not stored)
- *   3. Supabase: getPersonaById(db, personaId)
- *   4. @pet-pov/ai: buildNarrationSystemPrompt(persona), buildNarrationUserMessage(toon)
- *   5. @pet-pov/ai: generateChatCompletion(systemPrompt, userMessage) via OpenAI GPT-4o
- *      Reads from: OPENAI_API_KEY
- *   6. Supabase: insert into `narrations` table
- *
- * STUBBED: All implementation steps are commented out below.
- *   Note: This endpoint is for synchronous on-demand narration.
- *   The worker job (apps/worker/src/jobs/narration.ts) handles the async pipeline version.
+ *   - 200 { script: string, narrationId: string }
  */
 router.post("/", async (req, res, next) => {
   try {
     const body = NarrateBodySchema.safeParse(req.body);
     if (!body.success) {
-      res.status(400).json({ error: "Invalid request body", details: body.error.flatten() });
+      res.status(400).json({
+        error: "Invalid request body",
+        details: body.error.flatten(),
+      });
       return;
     }
 
-    // Normalise: prefer sessionId, fall back to videoId for legacy callers
     const sessionId = body.data.sessionId ?? body.data.videoId;
     const { personaId } = body.data;
-    const db = getSupabaseServiceClient();
+    const supabase = getSupabaseServiceClient();
 
-    // TODO [Phase 3]: Fetch events for the session from the database.
-    //   INPUT:  sessionId (string UUID)
-    //   OUTPUT: events (SessionEvent[])
-    //   SERVICE: Supabase `session_events` table
-    //
-    // const { data: eventsRow, error: eventsError } = await db
-    //   .from("session_events")
-    //   .select("events")
-    //   .eq("session_id", sessionId)
-    //   .single();
-    // if (eventsError || !eventsRow) {
-    //   res.status(404).json({ error: "Session events not found — run the pipeline first" });
-    //   return;
-    // }
+    // ── 1. Fetch session events ─────────────────────────────────────────────
+    const { data: eventsRow, error: eventsError } = await supabase
+      .from("session_events")
+      .select("events")
+      .eq("session_id", sessionId)
+      .single();
 
-    // TODO [Phase 3]: Encode events to TOON (in-memory only — do not store).
-    //   INPUT:  eventsRow.events (SessionEvent[])
-    //   OUTPUT: toon (string)
-    //   SERVICE: encodeEvents() from @pet-pov/toon
-    //
-    // const toon = encodeEvents(eventsRow.events);
+    if (eventsError || !eventsRow) {
+      res.status(404).json({
+        error: "Session events not found — run the pipeline first",
+      });
+      return;
+    }
 
-    // TODO [Phase 3]: Fetch persona from DB.
-    //   INPUT:  personaId (string UUID)
-    //   OUTPUT: persona (Persona)
-    //   SERVICE: getPersonaById() from @pet-pov/db
-    //
-    // const persona = await getPersonaById(db, personaId);
-    // if (!persona) {
-    //   res.status(404).json({ error: "Persona not found" });
-    //   return;
-    // }
+    // ── 2. Encode events to TOON (in-memory, not stored) ───────────────────
+    const toon = encodeEvents(eventsRow.events);
 
-    // TODO [Phase 3]: Build prompts and generate narration script.
-    //   INPUT:  persona (Persona), toon (string)
-    //   OUTPUT: script (string)
-    //   SERVICES: buildNarrationSystemPrompt(), buildNarrationUserMessage(), generateChatCompletion()
-    //   Reads from: OPENAI_API_KEY
-    //
-    // const systemPrompt = buildNarrationSystemPrompt(persona);
-    // const userMessage = buildNarrationUserMessage(toon);
-    // const script = await generateChatCompletion(systemPrompt, userMessage);
+    // ── 3. Fetch persona ────────────────────────────────────────────────────
+    const persona = await getPersonaById(supabase, personaId);
+    if (!persona) {
+      res.status(404).json({ error: "Persona not found" });
+      return;
+    }
 
-    // TODO [Phase 3]: Store the narration script in the narrations table.
-    //   INPUT:  sessionId, personaId, script
-    //   OUTPUT: narration record (id, script, voice_url: null)
-    //   SERVICE: Supabase `narrations` table
-    //
-    // const { data: narration } = await db
-    //   .from("narrations")
-    //   .insert({ video_id: sessionId, persona_id: personaId, script })
-    //   .select()
-    //   .single();
+    // ── 4. Fetch session + pet for species grounding ────────────────────────
+    const { data: sessionRow, error: sessionError } = await supabase
+      .from("sessions")
+      .select("pet_id")
+      .eq("id", sessionId)
+      .single();
 
-    // TODO [Phase 3]: Return the generated script:
-    // return res.status(200).json({ script, narrationId: narration.id });
+    if (sessionError || !sessionRow) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
 
-    res.status(202).json({
-      message: "Narration endpoint ready — implementation pending",
-      sessionId,
-      personaId,
-    });
+    const { data: petRow } = await supabase
+      .from("pets")
+      .select("name, species")
+      .eq("id", sessionRow.pet_id)
+      .single();
+
+    const petName = petRow?.name ?? "the pet";
+    const species = petRow?.species ?? "animal";
+
+    // ── 5. Build prompts with species grounding ─────────────────────────────
+    const baseSystemPrompt = buildNarrationSystemPrompt(persona);
+    const systemPrompt = [
+      baseSystemPrompt,
+      "",
+      `── PET IDENTITY (critical) ──`,
+      `Pet name: ${petName}`,
+      `Species: ${species}`,
+      `Rule: You are narrating from the perspective of a ${species} named ${petName}.`,
+      `Never refer to this pet as any other species or name. If the pet is a cat, never say "dog". Always say "${petName}".`,
+    ].join("\n");
+
+    const userMessage = buildNarrationUserMessage(toon);
+
+    // ── 6. Generate narration via OpenAI GPT-4o ────────────────────────────
+    const script = await generateChatCompletion(systemPrompt, userMessage);
+
+    // ── 7. Persist narration to Supabase ────────────────────────────────────
+    const { data: narration, error: narrationError } = await supabase
+      .from("narrations")
+      .insert({
+        video_id: sessionId, // column kept as video_id for backward compatibility
+        persona_id: personaId,
+        script,
+      })
+      .select()
+      .single();
+
+    if (narrationError || !narration) {
+      console.error("[narrate] Failed to store narration:", narrationError);
+      res.status(500).json({ error: "Failed to store narration" });
+      return;
+    }
+
+    // ── 8. Return result ────────────────────────────────────────────────────
+    res.status(200).json({ script, narrationId: narration.id });
   } catch (err) {
     next(err);
   }
