@@ -1,10 +1,8 @@
 import { Router } from "express";
 import { z } from "zod";
-import { getSupabaseServiceClient, getVideoById } from "@pet-pov/db";
-import { getPersonaById } from "@pet-pov/db";
+import { getSupabaseServiceClient, getPersonaById } from "@pet-pov/db";
 import { encodeEvents } from "@pet-pov/toon";
-import { generateChatCompletion } from "@pet-pov/ai";
-import { buildNarrationSystemPrompt, buildNarrationUserMessage } from "@pet-pov/ai";
+import { generateChatCompletion, buildNarrationSystemPrompt, buildNarrationUserMessage } from "@pet-pov/ai";
 
 const router = Router();
 
@@ -22,11 +20,29 @@ const NarrateBodySchema = z.object({
  * POST /api/narrate
  *
  * Generates a narration script for a session using the specified persona.
- * Requires the session's events to have already been extracted (step 4 of pipeline).
+ * Requires the session's events to have already been extracted (Step 4 of pipeline).
  *
- * Accepts `sessionId` (preferred) or legacy `videoId`.
+ * INPUT:
+ *   - body.sessionId: UUID of the session (preferred) — must have status >= "events_extracted"
+ *   - body.videoId:   UUID (legacy alias for sessionId)
+ *   - body.personaId: UUID of the persona to use for narration
  *
- * Returns: { script }
+ * OUTPUT:
+ *   - 200 { script: string }
+ *
+ * SERVICES (in order):
+ *   1. Supabase: fetch SessionEvent[] from `session_events` table
+ *      SERVICE: db.from("session_events").select("events").eq("session_id", sessionId).single()
+ *   2. @pet-pov/toon: encodeEvents(events) → TOON string (in-memory, not stored)
+ *   3. Supabase: getPersonaById(db, personaId)
+ *   4. @pet-pov/ai: buildNarrationSystemPrompt(persona), buildNarrationUserMessage(toon)
+ *   5. @pet-pov/ai: generateChatCompletion(systemPrompt, userMessage) via OpenAI GPT-4o
+ *      Reads from: OPENAI_API_KEY
+ *   6. Supabase: insert into `narrations` table
+ *
+ * STUBBED: All implementation steps are commented out below.
+ *   Note: This endpoint is for synchronous on-demand narration.
+ *   The worker job (apps/worker/src/jobs/narration.ts) handles the async pipeline version.
  */
 router.post("/", async (req, res, next) => {
   try {
@@ -41,11 +57,62 @@ router.post("/", async (req, res, next) => {
     const { personaId } = body.data;
     const db = getSupabaseServiceClient();
 
-    // TODO: Fetch events for the session from the database (session_events table)
-    // TODO: Encode events using encodeEvents() from @pet-pov/toon
-    // TODO: Fetch persona using getPersonaById()
-    // TODO: Build prompts and call generateChatCompletion()
-    // TODO: Store narration in DB and return script
+    // TODO [Phase 3]: Fetch events for the session from the database.
+    //   INPUT:  sessionId (string UUID)
+    //   OUTPUT: events (SessionEvent[])
+    //   SERVICE: Supabase `session_events` table
+    //
+    // const { data: eventsRow, error: eventsError } = await db
+    //   .from("session_events")
+    //   .select("events")
+    //   .eq("session_id", sessionId)
+    //   .single();
+    // if (eventsError || !eventsRow) {
+    //   res.status(404).json({ error: "Session events not found — run the pipeline first" });
+    //   return;
+    // }
+
+    // TODO [Phase 3]: Encode events to TOON (in-memory only — do not store).
+    //   INPUT:  eventsRow.events (SessionEvent[])
+    //   OUTPUT: toon (string)
+    //   SERVICE: encodeEvents() from @pet-pov/toon
+    //
+    // const toon = encodeEvents(eventsRow.events);
+
+    // TODO [Phase 3]: Fetch persona from DB.
+    //   INPUT:  personaId (string UUID)
+    //   OUTPUT: persona (Persona)
+    //   SERVICE: getPersonaById() from @pet-pov/db
+    //
+    // const persona = await getPersonaById(db, personaId);
+    // if (!persona) {
+    //   res.status(404).json({ error: "Persona not found" });
+    //   return;
+    // }
+
+    // TODO [Phase 3]: Build prompts and generate narration script.
+    //   INPUT:  persona (Persona), toon (string)
+    //   OUTPUT: script (string)
+    //   SERVICES: buildNarrationSystemPrompt(), buildNarrationUserMessage(), generateChatCompletion()
+    //   Reads from: OPENAI_API_KEY
+    //
+    // const systemPrompt = buildNarrationSystemPrompt(persona);
+    // const userMessage = buildNarrationUserMessage(toon);
+    // const script = await generateChatCompletion(systemPrompt, userMessage);
+
+    // TODO [Phase 3]: Store the narration script in the narrations table.
+    //   INPUT:  sessionId, personaId, script
+    //   OUTPUT: narration record (id, script, voice_url: null)
+    //   SERVICE: Supabase `narrations` table
+    //
+    // const { data: narration } = await db
+    //   .from("narrations")
+    //   .insert({ video_id: sessionId, persona_id: personaId, script })
+    //   .select()
+    //   .single();
+
+    // TODO [Phase 3]: Return the generated script:
+    // return res.status(200).json({ script, narrationId: narration.id });
 
     res.status(202).json({
       message: "Narration endpoint ready — implementation pending",

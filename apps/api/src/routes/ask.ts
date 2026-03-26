@@ -24,16 +24,30 @@ const AskBodySchema = z.object({
  *
  * Ask My Pet mode — generates a simulated pet response to a user question.
  *
- * Flow:
- * 1. Fetch session and validate it has been processed
- * 2. Fetch SessionEvent[] and encode to TOON for context
- * 3. Fetch conversation history for this session
- * 4. Build persona system prompt + TOON context + conversation history
- * 5. Generate pet response via OpenAI
- * 6. Store ConversationTurn
- * 7. Return response text (+ audio URL once TTS is wired)
+ * INPUT:
+ *   - body.sessionId: UUID of a processed session (must have status >= "events_extracted")
+ *   - body.personaId: UUID of the persona to respond as
+ *   - body.message:   The user's question (1–1000 chars)
  *
- * Returns: { response, audioUrl, turnId }
+ * OUTPUT:
+ *   - 200 { response: string, audioUrl: string | null, turnId: string }
+ *
+ * SERVICES (in order):
+ *   1. Supabase: getSessionById() → verify session exists and has been processed
+ *   2. Supabase: fetch `session_events.events` for context
+ *   3. @pet-pov/toon: encodeEvents() → TOON string (in-memory)
+ *   4. Supabase: getPersonaById() → persona for system prompt
+ *   5. @pet-pov/ai: buildAskMyPetSystemPrompt(persona, toon) — NOTE: this function
+ *      does not yet exist. Create it in packages/ai/src/prompts/ask-my-pet.ts.
+ *      It differs from buildNarrationSystemPrompt — it must frame responses as Q&A
+ *      not monologue, and stay in first-person character.
+ *   6. Supabase: getConversationTurns(db, sessionId) → format as chat history
+ *   7. @pet-pov/ai: generateChatCompletion(systemPrompt, message) via OpenAI GPT-4o
+ *      Reads from: OPENAI_API_KEY
+ *   8. TTS: synthesizeVoice(petResponse, persona.voice_id, persona.tts_provider)
+ *      Primary provider: ElevenLabs. Reads from: ELEVENLABS_API_KEY
+ *      NOTE: synthesizeVoice() does not yet exist. Create it in packages/ai/src/clients/tts.ts
+ *   9. Supabase: createConversationTurn() → writes to `conversation_turns` table
  *
  * ⚠️ This endpoint simulates a pet's perspective for creative purposes.
  *    It does NOT claim to translate or interpret real animal cognition.
@@ -49,22 +63,36 @@ router.post("/", async (req, res, next) => {
     const { sessionId, personaId, message } = body.data;
     const db = getSupabaseServiceClient();
 
-    // TODO: Fetch session and verify it has events extracted
+    // TODO [Phase 5]: Fetch session and verify it has events extracted.
+    //   INPUT:  sessionId (string UUID)
+    //   OUTPUT: session (Session) with session.status
+    //   SERVICE: getSessionById() from @pet-pov/db
+    //
     // const session = await getSessionById(db, sessionId);
     // if (!session) {
     //   res.status(404).json({ error: "Session not found" });
     //   return;
     // }
-    // if (!["events_extracted", "narrated", "voiced", "rendered", "complete"].includes(session.status)) {
+    // const processedStatuses = ["events_extracted", "narrated", "voiced", "rendered", "complete"];
+    // if (!processedStatuses.includes(session.status)) {
     //   res.status(409).json({ error: "Session events not yet extracted — run the pipeline first" });
     //   return;
     // }
 
-    // TODO: Fetch SessionEvent[] for context
+    // TODO [Phase 5]: Fetch SessionEvent[] for context.
+    //   INPUT:  sessionId (string UUID)
+    //   OUTPUT: events (SessionEvent[])
+    //   SERVICE: Supabase `session_events` table
+    //
     // const { data: eventsRow } = await db.from("session_events").select("events").eq("session_id", sessionId).single();
     // const toon = encodeEvents(eventsRow?.events ?? []);
 
-    // TODO: Fetch persona and build system prompt
+    // TODO [Phase 5]: Fetch persona and build Ask My Pet system prompt.
+    //   INPUT:  personaId (string UUID), toon (string)
+    //   OUTPUT: systemPrompt (string)
+    //   SERVICES: getPersonaById(), buildAskMyPetSystemPrompt() — must be created
+    //   NOTE: buildAskMyPetSystemPrompt lives in packages/ai/src/prompts/ask-my-pet.ts (not yet created)
+    //
     // const persona = await getPersonaById(db, personaId);
     // if (!persona) {
     //   res.status(404).json({ error: "Persona not found" });
@@ -72,17 +100,36 @@ router.post("/", async (req, res, next) => {
     // }
     // const systemPrompt = buildAskMyPetSystemPrompt(persona, toon);
 
-    // TODO: Fetch conversation history (last N turns for context window)
+    // TODO [Phase 5]: Fetch conversation history for this session (last N turns).
+    //   INPUT:  sessionId (string UUID)
+    //   OUTPUT: history (ConversationTurn[])
+    //   SERVICE: getConversationTurns() from @pet-pov/db
+    //
     // const history = await getConversationTurns(db, sessionId);
-    // const historyContext = formatConversationHistory(history);
+    // Format as: [{ role: "user", content: turn.user_message }, { role: "assistant", content: turn.pet_response }]
 
-    // TODO: Generate response using OpenAI
-    // const petResponse = await generateChatCompletion(systemPrompt, message, historyContext);
+    // TODO [Phase 5]: Generate pet response via OpenAI GPT-4o.
+    //   INPUT:  systemPrompt (string), message (string), formatted history
+    //   OUTPUT: petResponse (string)
+    //   SERVICE: generateChatCompletion() from @pet-pov/ai
+    //   Reads from: OPENAI_API_KEY
+    //
+    // const petResponse = await generateChatCompletion(systemPrompt, message);
 
-    // TODO: Synthesize TTS audio for the response (optional at MVP)
+    // TODO [Phase 5]: Synthesize TTS audio for the response.
+    //   INPUT:  petResponse (string), persona.voice_id (string), persona.tts_provider (TtsProvider)
+    //   OUTPUT: audioUrl (string) — Cloudinary URL of the audio file
+    //   SERVICE: synthesizeVoice() — must be created in packages/ai/src/clients/tts.ts
+    //   Primary provider: ElevenLabs. Reads from: ELEVENLABS_API_KEY
+    //   NOTE: audioUrl is optional at MVP — return null if TTS is not yet implemented
+    //
     // const audioUrl = await synthesizeVoice(petResponse, persona.voice_id, persona.tts_provider);
 
-    // TODO: Persist the conversation turn
+    // TODO [Phase 5]: Persist the conversation turn.
+    //   INPUT:  sessionId, personaId, user_message, pet_response, audio_url
+    //   OUTPUT: turn (ConversationTurn) with turn.id
+    //   SERVICE: createConversationTurn() from @pet-pov/db → writes to `conversation_turns`
+    //
     // const turn = await createConversationTurn(db, {
     //   session_id: sessionId,
     //   persona_id: personaId,
@@ -91,12 +138,14 @@ router.post("/", async (req, res, next) => {
     //   audio_url: audioUrl ?? null,
     // });
 
+    // TODO [Phase 5]: Return the real response:
+    // return res.status(200).json({ response: petResponse, audioUrl: audioUrl ?? null, turnId: turn.id });
+
     res.status(202).json({
       message: "Ask My Pet endpoint ready — implementation pending",
       sessionId,
       personaId,
       userMessage: message,
-      // TODO: return { response: petResponse, audioUrl, turnId: turn.id }
     });
   } catch (err) {
     next(err);

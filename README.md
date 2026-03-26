@@ -160,6 +160,29 @@ Remotion is NOT an AI video generation tool — it is a code-driven video render
 
 ---
 
+## 🗺️ Canonical Paths
+
+| Path | Status | Notes |
+|---|---|---|
+| `/sessions/[id]` | **Canonical** | Use for all new links, navigation, and references |
+| `/sessions` | **Canonical** | Session list page |
+| `/projects/[id]` | **Legacy** | Should eventually redirect to `/sessions/[id]` |
+| `/projects` | **Legacy** | Should eventually redirect to `/sessions` |
+
+> The domain model uses `Session` (table: `sessions`) as the primary entity.
+> The legacy `Video` / `videos` table remains in the database for backwards compatibility.
+> All new code must use `sessionId` — not `videoId` — as the primary identifier.
+
+---
+
+## 📋 Implementation Status
+
+See [HANDOFF.md](./HANDOFF.md) for the full implementation handoff document — including what is fully implemented, what is scaffolded (TODO-stubbed), and the recommended build order.
+
+See [docs/IMPLEMENTATION_PLAN.md](./docs/IMPLEMENTATION_PLAN.md) for the step-by-step implementation plan (Phases 1–6).
+
+---
+
 ## 📄 License
 
 MIT
