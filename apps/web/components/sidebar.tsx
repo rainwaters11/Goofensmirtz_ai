@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
@@ -8,7 +9,6 @@ import {
   Upload,
   Theater,
   Settings,
-  PawPrint,
 } from "lucide-react";
 import { cn } from "../lib/utils";
 import { Separator } from "./ui/separator";
@@ -27,10 +27,27 @@ export function Sidebar() {
   return (
     <aside className="flex h-full w-60 flex-col bg-sidebar text-sidebar-foreground">
       {/* ── Logo ──────────────────────────────────── */}
-      <div className="flex h-16 items-center gap-2.5 px-5">
-        <PawPrint className="h-6 w-6 text-primary" />
-        <span className="text-base font-bold tracking-tight">Pet POV AI</span>
-      </div>
+      <Link href="/" className="flex h-20 items-center gap-2.5 px-3">
+        <Image
+          src="/logo-icon.png"
+          alt="Pet POV AI icon"
+          width={88}
+          height={88}
+          className="object-contain shrink-0"
+          style={{ filter: "drop-shadow(0 2px 8px rgba(249,115,22,0.4))" }}
+          priority
+        />
+        <span style={{
+          fontSize: 13,
+          fontWeight: 800,
+          letterSpacing: "0.08em",
+          color: "#f97316",
+          textTransform: "uppercase" as const,
+          whiteSpace: "nowrap" as const,
+        }}>
+          Pet POV AI
+        </span>
+      </Link>
 
       <Separator className="bg-sidebar-border" />
 

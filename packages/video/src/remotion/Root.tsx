@@ -13,6 +13,7 @@ import {
 import { DEMO_RECAP_PROPS } from "./demo-recap-props";
 import { DemoPitch, DEMO_TOTAL_DURATION } from "./demo/DemoPitch";
 import { AppWalkthrough, WALKTHROUGH_TOTAL_DURATION } from "./demo/AppWalkthrough";
+import { SafetyAlertScene, SAFETY_ALERT_DURATION } from "./demo/SafetyAlertScene";
 
 /**
  * Calculate total duration based on the number of recap lines.
@@ -51,6 +52,14 @@ export const RemotionRoot: React.FC = () => {
         height={1080}
         fps={30}
         durationInFrames={WALKTHROUGH_TOTAL_DURATION}
+      />
+      <Composition
+        id="SafetyAlert"
+        component={SafetyAlertScene}
+        width={1920}
+        height={1080}
+        fps={30}
+        durationInFrames={SAFETY_ALERT_DURATION}
       />
     </>
   );

@@ -21,9 +21,9 @@ interface AskMyPetProps {
 // ─── Suggested prompts ────────────────────────────────────────────────────────
 
 const PROMPT_CHIPS = [
-  { label: "Best part of your day?", icon: "⭐" },
-  { label: "Why did you bark at the mail carrier?", icon: "📬" },
-  { label: "Tell me about that plant", icon: "🪴" },
+  { label: "What was the best part of your day?", icon: "⭐" },
+  { label: "Tell me about that trampoline", icon: "🪤" },
+  { label: "Who was that other cat you met?", icon: "🐈" },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────

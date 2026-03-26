@@ -26,8 +26,8 @@ interface AskMyPetPanelProps {
 
 const SUGGESTED_PROMPTS = [
   { label: "What was the best part of your day?", icon: "⭐" },
-  { label: "Why did you bark at the mail carrier?", icon: "📬" },
-  { label: "Tell me about that plant", icon: "🪴" },
+  { label: "Tell me about that trampoline", icon: "🪤" },
+  { label: "Who was that other cat you met?", icon: "🐈" },
 ];
 
 // ─── Voice helper ─────────────────────────────────────────────────────────────
@@ -87,7 +87,7 @@ export function AskMyPetPanel({
     setIsLoading(true);
 
     try {
-      const data = await askPet(sessionId, question, personaId);
+      const data = await askPet(sessionId, question, personaId); // persona = personaId
 
       const petMsg: ChatMessage = {
         id: `pet-${Date.now()}`,
