@@ -102,9 +102,9 @@ export default function DashboardPage() {
               {/* Narration quote */}
               <div className="rounded-lg bg-gradient-to-br from-orange-50/80 to-amber-50/40 px-4 py-3 border border-primary/8">
                 <p className="text-sm leading-relaxed text-foreground/90 italic">
-                  &ldquo;Something moved near the fence.<br />
-                  I stayed low. Watched. Waited.<br />
-                  It didn&apos;t belong here.&rdquo;
+                   &ldquo;I sniffed that trampoline for longer<br />
+                   than I&apos;d like to admit.<br />
+                   It smelled like mystery.&rdquo;
                 </p>
               </div>
 
@@ -202,7 +202,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
-              Goofinsmirtz narrates his wild Tuesday: mail carrier standoff → epic couch nap → tennis ball interrogation → suspicious plant investigation → full-speed backyard zoomies.
+              Goofinsmirtz narrates his wild Tuesday: trampoline investigation → jungle trek through the bushes → deep tree gazing → outdoor kibble feast → nose-touch with a tortoiseshell friend → woodland patrol.
             </p>
           </div>
         </Link>
@@ -266,7 +266,7 @@ export default function DashboardPage() {
               {/* Question */}
               <div className="flex justify-end">
                 <div className="rounded-xl rounded-br-sm bg-violet-600 px-3 py-1.5 text-xs text-white max-w-[85%]">
-                  What were you watching near the fence?
+                  What was the best part of your day?
                 </div>
               </div>
               {/* Answer */}
