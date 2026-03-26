@@ -317,25 +317,26 @@ export default function SessionDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
-              <div className="rounded-xl bg-zinc-950 relative overflow-hidden">
-                <video
-                  className="w-full rounded-xl"
-                  controls
-                  playsInline
-                  preload="metadata"
-                  poster=""
-                >
-                  <source src="/demo/catpov.mp4" type="video/mp4" />
-                  {/* Fallback if video cannot load */}
-                  <div className="flex aspect-video items-center justify-center">
-                    <div className="flex flex-col items-center gap-3 text-white">
-                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
-                        <Play className="h-7 w-7 fill-white text-white ml-1" strokeWidth={0} />
+              <div className="w-full max-w-2xl mx-auto px-0">
+                <div className="aspect-video rounded-xl overflow-hidden border border-neutral-800 bg-black">
+                  <video
+                    className="h-full w-full object-cover"
+                    controls
+                    playsInline
+                    preload="metadata"
+                  >
+                    <source src="/demo/catpov.mp4" type="video/mp4" />
+                    {/* Fallback if video cannot load */}
+                    <div className="flex h-full items-center justify-center">
+                      <div className="flex flex-col items-center gap-3 text-white">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
+                          <Play className="h-7 w-7 fill-white text-white ml-1" strokeWidth={0} />
+                        </div>
+                        <p className="text-sm text-white/60">Video unavailable</p>
                       </div>
-                      <p className="text-sm text-white/60">Video unavailable</p>
                     </div>
-                  </div>
-                </video>
+                  </video>
+                </div>
               </div>
             </CardContent>
           </Card>
