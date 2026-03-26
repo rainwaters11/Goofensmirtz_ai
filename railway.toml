@@ -3,5 +3,10 @@ name = "pet-pov-ai"
 
 [services.api]
 root = "."
-build = "pnpm install && pnpm turbo run build"
+build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/api build"
 start = "pnpm --filter @pet-pov/api start"
+
+[services.web]
+root = "."
+build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/web build"
+start = "pnpm --filter @pet-pov/web start"
