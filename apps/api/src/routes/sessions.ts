@@ -86,118 +86,133 @@ function resolvePersona(personaId?: string): Persona {
 }
 
 // ─── Fallback narrations per persona (offline / no-API-key demo) ──────────────
+// Based on the actual catpov.mp4 footage: outdoor cat adventure featuring
+// trampoline investigation, bush trekking, tree gazing, kibble snack,
+// meeting a tortoiseshell cat friend, and woodland patrol.
 
 const FALLBACK_NARRATIONS: Record<string, string> = {
-  "dramatic-dog": `Okay so first of all — who IS that guy who keeps coming to the door? Same smell. Same schedule. Suspicious.
+  "dramatic-dog": `Okay FIRST OF ALL — the trampoline. What IS that? Springs, metal, tension — deeply suspicious. I put my nose on every component. Left my verdict there too.
 
-I handled it. Loudly. Twice.
+Then the bushes called to me and I ANSWERED. Full jungle trek. Leaves in my face. Wind. Drama.
 
-Then I decided the couch needed me more than the backyard did, so I nested in for what I'm calling a "strategic recharge." Very important work.
+I stared up at that tree for a very long time. It knows things. I'm watching it.
 
-At some point a tennis ball appeared from nowhere and I had QUESTIONS. Important questions. I took them to the back door for investigation.
+THEN. Food. OUTDOORS food. In a bowl. Just sitting there. I ate it with the composure of a cat who absolutely expected this and was not at all delighted.
 
-The new plant thing? Still not sure about that. I'm watching it.
+A tortoiseshell appeared. We touched noses. This was a formal meeting. Records have been updated.
 
-Then — and I'm not entirely sure what happened here — my legs just… went. Full zoomie mode. Backyard laps. Wind in my ears. Pure freedom.
+Final patrol: dry leaves, pine needles, tall trees. All sectors clear. I am very tired and also completely fine.`,
 
-Now I'm resting on the cool floor tiles. Today was a lot. But I protected the house, investigated suspicious flora, and maintained peak physical readiness. Good day.`,
+  "chill-cat": `There was a trampoline. I sniffed it. Moved on.
 
-  "chill-cat": `So... a human came to the door. Again. The dog lost its mind. Again. I observed from the windowsill. Effortlessly.
+The bushes were... acceptable for trekking. I trekked. It was fine.
 
-The couch was adequate for my midday meditation. Three hours of stillness. The humans will never understand this level of discipline.
+The tree was large. I observed it. The tree did not observe me back. Typical.
 
-A ball appeared. I noted it. I did not engage. Beneath me.
+Found kibble outside. Ate it slowly. No rush. Nothing is ever worth rushing.
 
-The plant... now that was interesting. New. Green. Possibly an adversary. I circled it with appropriate caution and measured contempt.
+Another cat appeared. Tortoiseshell. We acknowledged each other. Neither of us made a big deal of it. As it should be.
 
-Then the dog did... laps. In the yard. For no reason. I watched from the perch. Exhausting just to observe.
+The woods were quiet and full of dead leaves. I walked through them with appropriate gravitas. I am home now. The yard is as I left it.`,
 
-I am now resting on the tiles. Not because I'm tired. Because I chose this specific temperature. Everything is intentional.`,
+  "neighborhood-boss": `0600 hours. Perimeter inspection initiated. First contact: a trampoline in sector west. Unknown purpose. I ran a full sniff sweep. Structurally concerning. Flagged for monitoring.
 
-  "neighborhood-boss": `0800 hours. Perimeter breach attempt at the front door. Visitor: repeat offender, same route daily. I deployed two bark volleys — full authority. Threat neutralized. The door held.
+Pushed through heavy brush — suspected concealment zone. Threat level: zero. Logged it anyway.
 
-Conducted a strategic withdrawal to the couch for intel processing. Three hours of deep analysis. The humans call it "napping." They don't understand operational tempo.
+Tall tree in sector north. Looked up for a full 10 seconds. No movement. Clean.
 
-Found unregistered equipment near the back door — tennis ball, origin unknown. Seized it. Under investigation.
+Outdoor rations confirmed operational at the feeding station. Ate a full patrol portion.
 
-New vegetation detected in sector 3. Ran a full 8-minute reconnaissance. Classification: uncertain. Maintaining surveillance.
+Encountered a tortoiseshell operative at the property line. Nose-touch identification protocol executed. Credentials verified. Friendly status confirmed.
 
-Executed high-speed perimeter sweeps at 1500 hours. Full backyard coverage. Zero breaches detected.
+Final sweep through the wooded zone: leaves, pine needles, zero breaches. This territory is mine.`,
 
-Status: all sectors secure. This block is mine.`,
+  "chaotic-gremlin": `OKAY there was a TRAMPOLINE and I had to smell ALL OF IT — the springs, the frame, the whole thing — and I don't know why but I needed to and I DID and it smelled like metal and outside and MYSTERIES.
 
-  "chaotic-gremlin": `OKAY so there was a GUY at the DOOR and I was like BARK BARK BARK and honestly I don't even know what he wanted but he LEFT so clearly I won that one — wait is that a BALL? BALL BALL BALL where did that come from I need it I HAVE it okay now what.
+Then I went THROUGH the bushes because they were THERE and I'm a CAT who DOES THINGS and the leaves were everywhere and I pushed through ALL of them.
 
-Then I took what the humans call a "nap" but really I was just VIBRATING horizontally for a while because my body needed to recharge for what happened NEXT which was — wait. There's a PLANT. When did that get here. It smells weird. I circled it EIGHT times. Suspicious.
+The tree. THE TREE. I stared up it for so long. I don't know what I was looking for. It doesn't matter. I found it.
 
-And THEN. Then my legs just ACTIVATED. Full zoomie protocol. Backyard laps at MAXIMUM speed. Wind. Ears. Freedom. No thoughts just RUNNING.
+FOOD. OUTSIDE FOOD. In a BOWL. I just — I ate it. Happily. Yes.
 
-Now I'm on the floor. It's cold and nice. Today was INCREDIBLE.`,
+Then another cat showed up and we TOUCHED NOSES and I wasn't ready for that but it was GREAT and we're friends now probably.
 
-  "royal-house-cat": `The staff permitted yet another visitor at the front entrance. The canine unit, predictably, lost all composure. I observed from my throne by the window. Beneath acknowledgment.
+Now I'm walking through dead leaves and they make a sound and I walk slower to hear more of the sound CRUNCH CRUNCH CRUNCH I could do this forever.`,
 
-I retired to the settee for my afternoon meditation — three hours of carefully curated stillness. One does not simply "nap." One communes with the silence.
+  "royal-house-cat": `The grounds required inspection. I obliged.
 
-A sphere appeared near the servant's entrance. Rubber. Yellow. Pedestrian. I made a note and moved on.
+First: a trampoline. An affront to the landscape, frankly. I surveyed it briefly and determined it does not belong, yet lacks the capacity to be anywhere else. I moved on with measured disdain.
 
-New flora in the drawing room. I conducted a thorough inspection — eight minutes of measured circling. The verdict: provisional tolerance. For now.
+The shrubbery was dense. I parted it. The shrubbery did not thank me. Expected.
 
-The canine performed its evening sprints. Graceless. Loud. I watched from the perch with the patience of a monarch observing court jesters.
+A tree. Old. Enormous. I gazed upward for an appropriate duration. Trees respect silence. We understood each other.
 
-I have since relocated to the cool tiles. Not from exhaustion — from preference. Everything I do is a choice. Remember that.`,
+The outdoor dining station presented acceptable fare. I consumed it without enthusiasm, which is how one eats when one has standards.
+
+A tortoiseshell presented itself. We exchanged ceremonial nose contact. I found no objection to her existence.
+
+The woodland was quiet and correctly lit. I patrolled it with the gait of someone who owns everything. Because I do.`,
 };
+
 
 // ─── Fallback Ask My Pet responses per persona ────────────────────────────────
 
 const FALLBACK_ASK_RESPONSES: Record<string, Record<string, string>> = {
   "dramatic-dog": {
-    default: "OBVIOUSLY the highlight was defending this household from that suspicious delivery person. Two rounds of barking. Full perimeter secured. But you didn't even say thank you. Classic human behavior.",
-    mail: "That guy? THAT GUY? He comes EVERY DAY with suspicious packages. Same time, same smell. I've been running surveillance for WEEKS and frankly my reports are being ignored. Two barks minimum. Non-negotiable.",
-    plant: "Okay so — the new green thing. I've been monitoring it closely. Eight full minutes of investigation. It doesn't move. It doesn't smell like food. It just… sits there. Honestly? Suspicious. I'm keeping my eye on it.",
-    best: "Look, every part of my day is the best part because I am incredible at being a dog. But if I HAD to choose? The zoomies. Backyard laps at full speed, wind in my ears, zero thoughts in my head. That's peak existence right there.",
-    safe: "Safe? I MADE it safe. This entire household operates under my protection. Every bark, every patrol, every strategic nap — all part of the plan. You're welcome.",
+    default: "OBVIOUSLY the highlight was the trampoline investigation. Springs, metal, tension — I documented all of it with my nose. Left my findings on every surface. Very thorough. Very me.",
+    trampoline: "That TRAMPOLINE. What is that even FOR? I spent a full sniff session on every part of it. It smells like metal and outside and also like someone ELSE was here. Not okay. Logged.",
+    cat: "The tortoiseshell? We touched noses. It was a formal diplomatic event. I reviewed her credentials. She's cleared. For now. I'm watching her.",
+    best: "The kibble obviously. OUTDOOR kibble. In a bowl. Just sitting there. I ate it with the dignity of a cat who is extremely used to excellence and was absolutely not surprised by this.",
+    tree: "I stared up it for a very long time. It knows things. I intend to find out what. Investigation ongoing.",
+    safe: "I patrolled the woods on my own two paws. Every pine needle accounted for. All dry leaves investigated. The woodland is clear. You're welcome.",
   },
   "neighborhood-boss": {
-    default: "I run a tight operation here. Every bark is calculated. Every patrol is logged. The perimeter was secure at last check — 0 breaches, 2 deterrence events. This block doesn't protect itself.",
-    mail: "Repeat offender. Same route, same time, 5 days a week. I've filed multiple bark reports. The humans keep accepting his deliveries anyway. Compromised leadership, if you ask me. I do what I can.",
-    plant: "New asset appeared in sector 3 without authorization. I ran a full recon sweep — 8 minutes, multiple angles. Classification: non-hostile but unverified. It's on probation.",
-    best: "Best part? The 1500 perimeter sweep. Full backyard at maximum speed. Every corner checked. Every shadow assessed. That's not exercise — that's operational excellence.",
-    safe: "The block is secure. Has been since I took command. Zero unauthorized entries on my watch. You sleep well because I don't.",
+    default: "Ran full exterior perimeter. Trampoline in sector west — flagged. Dense brush — cleared. Tall tree — observed. Outdoor rations — consumed. Tortoiseshell contact — verified friendly. Woodland — clean. This territory is mine.",
+    trampoline: "Sector west anomaly: large metallic structure with spring suspension. Unknown purpose. I ran a full sniff sweep — all four sides, multiple angles. It's on probation.",
+    cat: "Encountered a tortoiseshell operative. Used nose-touch identification protocol. Credentials checked out. She goes on the 'cleared' list. I don't hand those out lightly.",
+    best: "Final woodland sweep. Dry leaves, pine needles, full coverage. Zero breaches. That's what mission success looks like.",
+    tree: "Sector north: large tree, stationary. Looked up for 10 full seconds. Nothing moved. Classified as non-hostile infrastructure. It's still on my list.",
+    safe: "All sectors clear. Perimeter logged. The tortoiseshell is the only unverified variable and she's been cleared. We're good.",
   },
   "chaotic-gremlin": {
-    default: "OH MAN today was SO MUCH. There was barking and napping and a BALL and a PLANT and then my legs just went BRRRRR and I did laps in the yard and now I'm tired but also NOT tired because — wait, did you say something? I was thinking about that ball again.",
-    mail: "THE DOOR GUY!! He comes and I bark and he LEAVES every single time so clearly I am very powerful and important. One time I barked THREE times and he left even FASTER. I should get a medal. Do dogs get medals? I want one.",
-    plant: "THE PLANT. It showed up out of NOWHERE. It just sits there. Menacingly. I sniffed it from EVERY angle — I'm talking full 360. It smells like dirt and secrets. I'll be watching it. CLOSELY.",
-    best: "ZOOMIES. Obviously. My legs just went and I was RUNNING and the wind was in my face and I had ZERO thoughts in my head and it was the most beautiful moment of my entire life until the next one which will probably be in like 5 minutes.",
-    safe: "Safe?? I'm the SAFEST. I bark at EVERYTHING. Nothing gets past me except sometimes things I don't notice but that doesn't count because if I NOTICED them I would DEFINITELY bark.",
+    default: "OKAY the trampoline was FIRST and I had to smell EVERYTHING and then the BUSHES and then the TREE and then FOOD omg and then ANOTHER CAT and then LEAVES and honestly it was the BEST DAY and I'm only slightly vibrating right now.",
+    trampoline: "THE TRAMPOLINE!! It's HUGE and springy and metal and I put my nose on every part of it and it smelled like OUTSIDE and MYSTERIES and I still don't know what it IS but I love it.",
+    cat: "SHE JUST APPEARED. A tortoiseshell. Out of NOWHERE. And we touched NOSES and I wasn't ready but it was SO GOOD and we're definitely friends now I've decided.",
+    best: "THE LEAVES IN THE WOODS. They go CRUNCH. I walked slow so I could hear more crunch. CRUNCH CRUNCH CRUNCH. I could do that forever. It's the best sound.",
+    tree: "THE TREE. It's so TALL. I looked up and just.... kept looking. There was nothing up there. That made it MORE interesting somehow. I'll be back.",
+    safe: "I patrolled EVERYTHING. The yard, the bushes, the woods — all checked by me personally. You're so welcome. Also the leaves are crunchy and that's a bonus.",
   },
   "royal-house-cat": {
-    default: "The day was... adequate. The staff maintained an acceptable level of service, though dinner was, once again, not precisely on time. The canine provided its usual cacophony. I endured it with grace.",
-    mail: "Ah, the daily visitor. The dog treats it as an invasion. I treat it as background noise. One cannot be bothered by every commoner who approaches the estate. That's what the help is for.",
-    plant: "The new foliage. Yes, I inspected it. Thoroughly. It passed my initial assessment, though I have not granted it permanent residency. All things in this household exist at my discretion.",
-    best: "I don't have a 'best part.' Every moment I occupy contributes to the overall excellence of the household. Though... the afternoon sun on the perch at 3 PM was... not unpleasant. Don't read into that.",
-    safe: "Safe? My dear, safety is a construct for those who lack confidence. I am perfectly composed at all times. The household is calm because I will it to be so.",
+    default: "The grounds required inspection. I provided it. Trampoline: concerning. Shrubbery: navigated. Tree: acknowledged. Kibble: consumed without enthusiasm. Tortoiseshell: tolerated. Woodland: patrolled. You may thank me later.",
+    trampoline: "An affront to the landscape. However, it is stationary and I have noted it. I conducted a brief inspection — purely as a formality. Its existence is provisionally permitted.",
+    cat: "A tortoiseshell appeared. We exchanged ceremonial nose contact. I found no objection to her presence. She may continue existing in my vicinity.",
+    best: "The woodland at dusk. Still. Properly lit. Full of leaves that made appropriate sounds beneath my paws. That is what a landscape should feel like.",
+    tree: "Ancient. Enormous. Quietly impressive. We shared a moment of mutual recognition. Trees endure. I respect that.",
+    safe: "Safety is a concept for those who require reassurance. I patrolled the full perimeter out of preference, not necessity. It is — as always — entirely secure.",
   },
   "chill-cat": {
-    default: "The day happened. I was present for most of it. The dog barked at things. A ball existed. I declined to participate in any of it. Overall... adequate.",
-    mail: "The delivery human arrived. The dog staged a full response. I... did not. From my window perch, the entire exchange appeared predictable and beneath engagement. As most things are.",
-    plant: "New plant. I circled it. It didn't move. Neither did I, for a while. We reached an understanding — it stays in its corner, I stay in mine. Coexistence through mutual indifference.",
-    best: "Best part? The three-hour meditation on the couch. Perfectly still. Perfectly quiet. The humans thought I was sleeping. I was achieving a level of peace they'll never comprehend.",
-    safe: "I don't concern myself with safety. I concern myself with comfort, silence, and the quality of afternoon light. Everything else is... noise.",
+    default: "There was a trampoline. I sniffed it. Went through some bushes. Stared at a tree. Ate kibble outside. Met another cat. Walked through some woods. It was a day. I was in it.",
+    trampoline: "The trampoline was there. I investigated it at my own pace. No rush. It smelled like metal and something that used to be rubber. I added my own scent. Left.",
+    cat: "Another cat appeared. We sniffed. It was low effort on both sides. Neither of us made it weird. I appreciate that in an acquaintance.",
+    best: "The kibble, honestly. Finding food outside, in a bowl, requiring zero effort from me — that's the kind of day I can endorse.",
+    tree: "I looked up at it for a while. Big tree. Old, probably. I didn't need to know more than that.",
+    safe: "The woods were quiet. I walked through them. Nothing required my attention. That's all I ask of a place.",
   },
 };
 
 function getFallbackResponse(personaId: string, message: string): string {
   const responses = FALLBACK_ASK_RESPONSES[personaId] ?? FALLBACK_ASK_RESPONSES["dramatic-dog"]!;
   const lower = message.toLowerCase();
-  if (lower.includes("mail") || lower.includes("bark") || lower.includes("carrier") || lower.includes("door"))
-    return responses["mail"]!;
-  if (lower.includes("plant") || lower.includes("green"))
-    return responses["plant"]!;
-  if (lower.includes("best") || lower.includes("highlight") || lower.includes("favorite"))
-    return responses["best"]!;
-  if (lower.includes("safe") || lower.includes("protect") || lower.includes("secure"))
-    return responses["safe"]!;
+  if (lower.includes("trampoline") || lower.includes("spring") || lower.includes("bouncy"))
+    return responses["trampoline"] ?? responses["default"]!;
+  if (lower.includes("cat") || lower.includes("friend") || lower.includes("tortoise") || lower.includes("meet"))
+    return responses["cat"] ?? responses["default"]!;
+  if (lower.includes("tree") || lower.includes("trunk") || lower.includes("tall"))
+    return responses["tree"] ?? responses["default"]!;
+  if (lower.includes("best") || lower.includes("highlight") || lower.includes("favorite") || lower.includes("kibble") || lower.includes("food") || lower.includes("eat"))
+    return responses["best"] ?? responses["default"]!;
+  if (lower.includes("safe") || lower.includes("protect") || lower.includes("secure") || lower.includes("patrol") || lower.includes("woods") || lower.includes("forest"))
+    return responses["safe"] ?? responses["default"]!;
   return responses["default"]!;
 }
 

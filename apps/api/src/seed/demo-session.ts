@@ -1,9 +1,13 @@
 import type { Session, SessionEvent } from "@pet-pov/db";
 
 /**
- * Seeded demo session for reliable demo/film presentation.
+ * Seeded demo session for Goofinsmirtz's outdoor adventure.
  *
- * Use DEMO_SESSION_ID to identify the demo session in API routes.
+ * Events extracted from the actual catpov.mp4 footage:
+ * Goofinsmirtz goes on an outdoor expedition — investigates a trampoline,
+ * treks through dense bushes, gazes up at a large tree, finds a kibble bowl,
+ * meets a tortoiseshell cat friend, then patrols a wooded area.
+ *
  * When real Gemini extraction is ready, this module can be removed
  * and all data will come from Supabase instead.
  */
@@ -23,15 +27,16 @@ export const DEMO_SESSION: Session = {
   rendered_video_url: null,     // set after render pipeline completes
   audio_url: null,              // set after ElevenLabs TTS generation
 
-  duration_seconds: 6120, // 1h 42m
+  duration_seconds: 118, // ~2 minutes of footage
   status: "complete",
   modes_run: ["recap", "ask-my-pet"],
   created_at: "2026-03-25T09:00:00Z",
-  updated_at: "2026-03-25T10:42:00Z",
+  updated_at: "2026-03-25T09:02:00Z",
 };
 
 /**
- * Believable session events for a Golden Retriever's day.
+ * Session events extracted from the actual catpov.mp4 footage.
+ * Goofinsmirtz is an outdoor explorer cat — this is a backyard/woodland adventure.
  *
  * TODO: Replace with real Gemini Vision extraction output.
  *       The shape is identical — swap getMockedSessionEvents()
@@ -40,83 +45,63 @@ export const DEMO_SESSION: Session = {
 export const DEMO_SESSION_EVENTS: SessionEvent[] = [
   {
     timestamp_start: 0,
-    timestamp_end: 45,
-    description: "Dog barks loudly at the mail carrier approaching the front door",
-    subjects: ["dog", "mail carrier", "front door"],
-    actions: ["barking", "running to door", "tail wagging"],
-    emotion: "excited",
-    environment: "living room",
+    timestamp_end: 10,
+    description: "Goofinsmirtz sniffs and investigates a blue trampoline in the garden, examining the frame and springs up close",
+    subjects: ["cat", "trampoline", "garden"],
+    actions: ["sniffing", "investigating", "circling"],
+    emotion: "curious",
+    environment: "backyard garden",
     confidence: 0.95,
   },
   {
-    timestamp_start: 120,
-    timestamp_end: 210,
-    description: "Dog runs back to the window and barks at the mail carrier a second time",
-    subjects: ["dog", "mail carrier", "window"],
-    actions: ["barking", "jumping at window"],
-    emotion: "territorial",
-    environment: "living room",
-    confidence: 0.92,
+    timestamp_start: 10,
+    timestamp_end: 25,
+    description: "Pushes through dense green bushes and tall grass on an adventurous jungle trek",
+    subjects: ["cat", "bushes", "tall grass"],
+    actions: ["walking", "pushing through foliage", "exploring"],
+    emotion: "adventurous",
+    environment: "backyard garden — dense vegetation",
+    confidence: 0.93,
   },
   {
-    timestamp_start: 600,
-    timestamp_end: 2400,
-    description: "Dog curls up on the couch and naps for an extended period",
-    subjects: ["dog", "couch"],
-    actions: ["sleeping", "snoring", "twitching"],
-    emotion: "calm",
-    environment: "living room",
-    confidence: 0.98,
-  },
-  {
-    timestamp_start: 2500,
-    timestamp_end: 2700,
-    description: "Dog wakes up and stretches, then drinks water from bowl",
-    subjects: ["dog", "water bowl"],
-    actions: ["stretching", "drinking"],
-    emotion: "content",
-    environment: "kitchen",
-    confidence: 0.94,
-  },
-  {
-    timestamp_start: 3000,
-    timestamp_end: 3300,
-    description: "Dog finds a tennis ball near the back door and carries it around",
-    subjects: ["dog", "tennis ball", "back door"],
-    actions: ["sniffing", "picking up ball", "carrying"],
-    emotion: "curious",
-    environment: "hallway",
+    timestamp_start: 25,
+    timestamp_end: 35,
+    description: "Walks up to the base of a massive tree and stares all the way up the trunk with intense focus",
+    subjects: ["cat", "large tree"],
+    actions: ["looking up", "observing", "sitting"],
+    emotion: "focused",
+    environment: "backyard — near large tree",
     confidence: 0.91,
   },
   {
-    timestamp_start: 3600,
-    timestamp_end: 4100,
-    description: "Dog repeatedly investigates a new potted plant, sniffing it from multiple angles",
-    subjects: ["dog", "potted plant"],
-    actions: ["sniffing", "circling", "pawing"],
-    emotion: "curious",
-    environment: "living room",
-    confidence: 0.88,
+    timestamp_start: 35,
+    timestamp_end: 50,
+    description: "Discovers a bowl of orange and brown kibble on the ground and settles in for a satisfying outdoor snack",
+    subjects: ["cat", "kibble bowl", "food"],
+    actions: ["eating", "sniffing food", "crunching"],
+    emotion: "content",
+    environment: "backyard — food station",
+    confidence: 0.97,
   },
   {
-    timestamp_start: 5400,
-    timestamp_end: 5700,
-    description: "Dog sprints laps around the backyard in a sudden burst of energy",
-    subjects: ["dog", "backyard"],
-    actions: ["running", "zoomies", "panting"],
-    emotion: "ecstatic",
+    timestamp_start: 50,
+    timestamp_end: 70,
+    description: "Meets a tortoiseshell cat friend in the yard — they touch noses and stand close together in a friendly greeting",
+    subjects: ["cat", "tortoiseshell cat", "friend"],
+    actions: ["sniffing noses", "standing close", "social greeting"],
+    emotion: "social",
     environment: "backyard",
     confidence: 0.96,
   },
   {
-    timestamp_start: 5800,
-    timestamp_end: 6100,
-    description: "Dog lays down on the cool tile floor, panting and resting after zoomies",
-    subjects: ["dog", "tile floor"],
-    actions: ["laying down", "panting", "resting"],
-    emotion: "tired",
-    environment: "kitchen",
-    confidence: 0.93,
+    timestamp_start: 70,
+    timestamp_end: 118,
+    description: "Embarks on a slow, deliberate patrol through a wooded area — crunching over dry leaves and pine needles between tall trees",
+    subjects: ["cat", "woodland", "fallen leaves", "trees"],
+    actions: ["walking", "patrolling", "sniffing ground"],
+    emotion: "calm",
+    environment: "wooded area",
+    confidence: 0.94,
   },
 ];
 
