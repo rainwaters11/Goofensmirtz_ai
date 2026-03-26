@@ -302,7 +302,10 @@ router.get("/:id/recap", async (req, res, _next) => {
 // ─── POST /api/sessions/:id/voice ────────────────────────────────────────────
 
 /**
- * Generates TTS audio for a session recap using ElevenLabs.
+ * Generates TTS audio for a session recap.
+ *
+ * Primary provider: OpenAI TTS (tts-1, onyx voice)
+ * Future upgrade:  ElevenLabs (when key has text_to_speech permission)
  *
  * DATA OWNERSHIP:
  *   - audio_url is stored in Supabase as a reference (see Session.audio_url)
@@ -313,8 +316,8 @@ router.get("/:id/recap", async (req, res, _next) => {
  * Returns: { audioUrl: string | null; cached: boolean; fallback: boolean }
  */
 
-// Fixed ElevenLabs demo voice — "Rachel" (neutral, expressive)
-const DEMO_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
+// ElevenLabs demo voice — "Rachel" — used when ElevenLabs key has TTS permission
+const DEMO_ELEVENLABS_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 
 // In-memory cache: "sessionId:personaId" → base64 data URL
 const audioCache = new Map<string, string>();
@@ -330,20 +333,22 @@ router.post("/:id/voice", async (req, res, _next) => {
     return;
   }
 
-  const apiKey = process.env["ELEVENLABS_API_KEY"];
-  if (!apiKey) {
-    console.warn("[voice] ELEVENLABS_API_KEY not set — returning fallback");
+  const openAiKey = process.env["OPENAI_API_KEY"];
+  const elevenLabsKey = process.env["ELEVENLABS_API_KEY"];
+
+  if (!openAiKey && !elevenLabsKey) {
+    console.warn("[voice] No TTS API key configured — returning fallback");
     res.json({ audioUrl: null, cached: false, fallback: true });
     return;
   }
 
   try {
-    // ── Generate narration text ────────────────────────────────────────────
+    // ── Resolve narration text ─────────────────────────────────────────────
     const events = getMockedSessionEvents(id) ?? DEMO_SESSION_EVENTS;
     const persona = resolvePersona(personaId);
     let narrationScript: string;
 
-    if (process.env["OPENAI_API_KEY"]) {
+    if (openAiKey) {
       try {
         const toon = encodeEvents(events);
         const systemPrompt = buildNarrationSystemPrompt(persona);
@@ -356,41 +361,76 @@ router.post("/:id/voice", async (req, res, _next) => {
       narrationScript = FALLBACK_NARRATIONS[personaId] ?? FALLBACK_NARRATIONS["dramatic-dog"]!;
     }
 
-    // Trim to ~500 chars for demo reliability and ElevenLabs cost
+    // Trim to ~500 chars for demo reliability + TTS cost
     const textToSpeak = narrationScript.slice(0, 500);
 
-    // ── Call ElevenLabs TTS API ────────────────────────────────────────────
-    const ttsRes = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${DEMO_VOICE_ID}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": apiKey,
-          "Content-Type": "application/json",
-          Accept: "audio/mpeg",
-        },
-        body: JSON.stringify({
-          text: textToSpeak,
-          model_id: "eleven_monolingual_v1",
-          voice_settings: { stability: 0.5, similarity_boost: 0.75 },
-        }),
-      }
-    );
+    let audioBuffer: Buffer | null = null;
 
-    if (!ttsRes.ok) {
-      const errText = await ttsRes.text();
-      console.warn("[voice] ElevenLabs error:", ttsRes.status, errText);
+    // ── Primary: ElevenLabs TTS (Rachel voice — expressive and natural) ───────
+    if (elevenLabsKey) {
+      try {
+        const elRes = await fetch(
+          `https://api.elevenlabs.io/v1/text-to-speech/${DEMO_ELEVENLABS_VOICE_ID}`,
+          {
+            method: "POST",
+            headers: {
+              "xi-api-key": elevenLabsKey,
+              "Content-Type": "application/json",
+              Accept: "audio/mpeg",
+            },
+            body: JSON.stringify({
+              text: textToSpeak,
+              model_id: "eleven_monolingual_v1",
+              voice_settings: { stability: 0.5, similarity_boost: 0.75 },
+            }),
+          }
+        );
+        if (elRes.ok) {
+          audioBuffer = Buffer.from(await elRes.arrayBuffer());
+        } else {
+          const errText = await elRes.text();
+          console.warn("[voice] ElevenLabs error:", elRes.status, errText.slice(0, 200));
+        }
+      } catch (err) {
+        console.warn("[voice] ElevenLabs request failed:", err);
+      }
+    }
+
+    // ── Fallback: OpenAI TTS (tts-1, onyx voice) if ElevenLabs unavailable ──
+    if (!audioBuffer && openAiKey) {
+      try {
+        const openAiTtsRes = await fetch("https://api.openai.com/v1/audio/speech", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${openAiKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "tts-1",
+            input: textToSpeak,
+            voice: "onyx",
+            response_format: "mp3",
+          }),
+        });
+        if (openAiTtsRes.ok) {
+          audioBuffer = Buffer.from(await openAiTtsRes.arrayBuffer());
+        } else {
+          const errText = await openAiTtsRes.text();
+          console.warn("[voice] OpenAI TTS error:", openAiTtsRes.status, errText.slice(0, 200));
+        }
+      } catch (err) {
+        console.warn("[voice] OpenAI TTS fallback failed:", err);
+      }
+    }
+
+    if (!audioBuffer) {
       res.json({ audioUrl: null, cached: false, fallback: true });
       return;
     }
 
-    // ── Convert audio buffer to base64 data URL ────────────────────────────
-    const audioBuffer = Buffer.from(await ttsRes.arrayBuffer());
+    // ── Return as base64 data URL ──────────────────────────────────────────
     const audioUrl = `data:audio/mpeg;base64,${audioBuffer.toString("base64")}`;
-
-    // Cache for this session run
     audioCache.set(cacheKey, audioUrl);
-
     res.json({ audioUrl, cached: false, fallback: false });
   } catch (err) {
     console.error("[voice] Unexpected error:", err);
