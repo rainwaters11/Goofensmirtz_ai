@@ -2,10 +2,6 @@ import express from "express";
 import cors from "cors";
 import { uploadRouter } from "./routes/upload.js";
 import { processRouter } from "./routes/process.js";
-import { narrateRouter } from "./routes/narrate.js";
-import { voiceRouter } from "./routes/voice.js";
-import { renderRouter } from "./routes/render.js";
-import { askRouter } from "./routes/ask.js";
 import { sessionsRouter } from "./routes/sessions.js";
 
 const app = express();
@@ -23,12 +19,7 @@ app.get("/health", (_req, res) => {
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.use("/api/upload", uploadRouter);
 app.use("/api/process", processRouter);
-app.use("/api/narrate", narrateRouter);
-app.use("/api/voice", voiceRouter);
-app.use("/api/render", renderRouter);
-// Ask My Pet mode — conversational Q&A against a session
-app.use("/api/ask", askRouter);
-// Session detail + insights + recap
+// Session detail, insights, recap, voice, ask-my-pet
 app.use("/api/sessions", sessionsRouter);
 
 // ─── Error handler ────────────────────────────────────────────────────────────
