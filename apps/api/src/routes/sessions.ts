@@ -115,17 +115,17 @@ Another cat appeared. Tortoiseshell. We acknowledged each other. Neither of us m
 
 The woods were quiet and full of dead leaves. I walked through them with appropriate gravitas. I am home now. The yard is as I left it.`,
 
-  "neighborhood-boss": `0600 hours. Perimeter inspection initiated. First contact: a trampoline in sector west. Unknown purpose. I ran a full sniff sweep. Structurally concerning. Flagged for monitoring.
+  "neighborhood-boss": `I did a full perimeter sweep today. First thing I hit: a trampoline out by sector west. Never seen it before. I sniffed every inch of it. Springs, frame, connectors — all documented. I'm not sure what it's for but I don't like surprises in my territory.
 
-Pushed through heavy brush — suspected concealment zone. Threat level: zero. Logged it anyway.
+I pushed through the dense brush myself. Had to know what was in there. Nothing. But I know now, and that matters.
 
-Tall tree in sector north. Looked up for a full 10 seconds. No movement. Clean.
+I stood under that big tree and looked straight up. Ten full seconds. Nothing moved. I've got my eye on it.
 
-Outdoor rations confirmed operational at the feeding station. Ate a full patrol portion.
+I found my outdoor rations at the station and ate every piece. Fuel for the mission.
 
-Encountered a tortoiseshell operative at the property line. Nose-touch identification protocol executed. Credentials verified. Friendly status confirmed.
+I met a tortoiseshell at the property line. We touched noses. I checked her out. She's clean — I'm adding her to my approved list.
 
-Final sweep through the wooded zone: leaves, pine needles, zero breaches. This territory is mine.`,
+I finished with a full sweep through the wooded zone. Dry leaves, pine needles, tall trees. I walked every inch of it. Zero threats. This territory is mine and I intend to keep it that way.`,
 
   "chaotic-gremlin": `OKAY there was a TRAMPOLINE and I had to smell ALL OF IT — the springs, the frame, the whole thing — and I don't know why but I needed to and I DID and it smelled like metal and outside and MYSTERIES.
 
@@ -139,19 +139,19 @@ Then another cat showed up and we TOUCHED NOSES and I wasn't ready for that but 
 
 Now I'm walking through dead leaves and they make a sound and I walk slower to hear more of the sound CRUNCH CRUNCH CRUNCH I could do this forever.`,
 
-  "royal-house-cat": `The grounds required inspection. I obliged.
+  "royal-house-cat": `I inspected my grounds today. As I do.
 
-First: a trampoline. An affront to the landscape, frankly. I surveyed it briefly and determined it does not belong, yet lacks the capacity to be anywhere else. I moved on with measured disdain.
+I came across a trampoline near the garden. I want it known that I find it architecturally offensive. I gave it a brief once-over — purely out of obligation — and moved on. It does not have my approval.
 
-The shrubbery was dense. I parted it. The shrubbery did not thank me. Expected.
+I moved through the shrubbery with the grace befitting my station. It was dense. I was denser.
 
-A tree. Old. Enormous. I gazed upward for an appropriate duration. Trees respect silence. We understood each other.
+I stood before a very old, very large tree and gazed upward at it for an appropriate amount of time. We reached an understanding. I left satisfied.
 
-The outdoor dining station presented acceptable fare. I consumed it without enthusiasm, which is how one eats when one has standards.
+I dined outside today. The kibble was... acceptable. I ate it with the composure of someone accustomed to finer things, which I am.
 
-A tortoiseshell presented itself. We exchanged ceremonial nose contact. I found no objection to her existence.
+I encountered a tortoiseshell. We touched noses. I found nothing objectionable about her. She may remain.
 
-The woodland was quiet and correctly lit. I patrolled it with the gait of someone who owns everything. Because I do.`,
+I completed my woodland patrol as evening settled in. Leaves, pine needles, long shadows. I walked through all of it like someone who owns it. Because I do.`,
 };
 
 
@@ -167,12 +167,12 @@ const FALLBACK_ASK_RESPONSES: Record<string, Record<string, string>> = {
     safe: "I patrolled the woods on my own two paws. Every pine needle accounted for. All dry leaves investigated. The woodland is clear. You're welcome.",
   },
   "neighborhood-boss": {
-    default: "Ran full exterior perimeter. Trampoline in sector west — flagged. Dense brush — cleared. Tall tree — observed. Outdoor rations — consumed. Tortoiseshell contact — verified friendly. Woodland — clean. This territory is mine.",
-    trampoline: "Sector west anomaly: large metallic structure with spring suspension. Unknown purpose. I ran a full sniff sweep — all four sides, multiple angles. It's on probation.",
-    cat: "Encountered a tortoiseshell operative. Used nose-touch identification protocol. Credentials checked out. She goes on the 'cleared' list. I don't hand those out lightly.",
-    best: "Final woodland sweep. Dry leaves, pine needles, full coverage. Zero breaches. That's what mission success looks like.",
-    tree: "Sector north: large tree, stationary. Looked up for 10 full seconds. Nothing moved. Classified as non-hostile infrastructure. It's still on my list.",
-    safe: "All sectors clear. Perimeter logged. The tortoiseshell is the only unverified variable and she's been cleared. We're good.",
+    default: "I ran the full perimeter today. I sniffed the trampoline — flagged it. I pushed through the brush — cleared it. I stared up that tree — logged it. I ate my outdoor rations. I touched noses with the tortoiseshell — she's verified. I swept the woodland. Zero breaches. This territory is mine and I made sure of it.",
+    trampoline: "I found a trampoline in the yard. Never seen it before. I put my nose on every inch — the springs, the frame, the legs. It smells like metal and someone else. I don't know what it's for but I've flagged it and I'll be back to check on it. It's on probation.",
+    cat: "I met a tortoiseshell today. I walked right up to her and touched noses — full identification protocol. She held her ground. No aggression. Good instincts. I've cleared her and added her to my approved contacts. I don't do that easily.",
+    best: "Honestly? My woodland sweep. I walked every inch of it — dry leaves, pine needles, tall trees. I knew every sound, every shadow. Zero threats. That's what it feels like when I've done my job right.",
+    tree: "I stood under that tree and looked straight up it for ten full seconds. Nothing moved. I haven't decided if I trust it yet but I've noted its position and I'll be monitoring it. Nothing in my territory escapes my attention.",
+    safe: "I personally swept the entire perimeter — yard, brush, woodland. I checked every corner. I verified all contacts. You're safe because I made sure of it. That's what I do.",
   },
   "chaotic-gremlin": {
     default: "OKAY the trampoline was FIRST and I had to smell EVERYTHING and then the BUSHES and then the TREE and then FOOD omg and then ANOTHER CAT and then LEAVES and honestly it was the BEST DAY and I'm only slightly vibrating right now.",
@@ -183,12 +183,12 @@ const FALLBACK_ASK_RESPONSES: Record<string, Record<string, string>> = {
     safe: "I patrolled EVERYTHING. The yard, the bushes, the woods — all checked by me personally. You're so welcome. Also the leaves are crunchy and that's a bonus.",
   },
   "royal-house-cat": {
-    default: "The grounds required inspection. I provided it. Trampoline: concerning. Shrubbery: navigated. Tree: acknowledged. Kibble: consumed without enthusiasm. Tortoiseshell: tolerated. Woodland: patrolled. You may thank me later.",
-    trampoline: "An affront to the landscape. However, it is stationary and I have noted it. I conducted a brief inspection — purely as a formality. Its existence is provisionally permitted.",
-    cat: "A tortoiseshell appeared. We exchanged ceremonial nose contact. I found no objection to her presence. She may continue existing in my vicinity.",
-    best: "The woodland at dusk. Still. Properly lit. Full of leaves that made appropriate sounds beneath my paws. That is what a landscape should feel like.",
-    tree: "Ancient. Enormous. Quietly impressive. We shared a moment of mutual recognition. Trees endure. I respect that.",
-    safe: "Safety is a concept for those who require reassurance. I patrolled the full perimeter out of preference, not necessity. It is — as always — entirely secure.",
+    default: "I conducted a thorough inspection of my grounds today. I evaluated the trampoline — I don't like it. I navigated the shrubbery — beneath me, but I managed. I acknowledged the large tree. I dined outside with appropriate restraint. I granted the tortoiseshell a nose greeting. I patrolled my woodland. You're welcome.",
+    trampoline: "I inspected that trampoline today. I found it architecturally offensive and structurally presumptuous. I gave it a very deliberate once-over — springs, frame, all of it — and I have noted that it does not have my approval. It may remain for now. I'm watching it.",
+    cat: "I met a tortoiseshell in my yard. I approached her, I touched noses with her, and I evaluated her. I found nothing objectionable. I've decided she may continue existing near my property. I want you to know I do not make that decision lightly.",
+    best: "I'll tell you what I enjoyed: walking through my woodland in the quiet evening. I felt every leaf beneath my paws. I moved through the trees at the pace of something that owns them. Which I do. That is my ideal environment.",
+    tree: "I stood before a very old, very large tree today and I looked up at it for a long time. We reached a mutual understanding. I respect its age. I believe it respects my authority. It was a dignified moment.",
+    safe: "I personally patrolled every corner of my grounds — yard, shrubbery, woodland. I did it not because I needed to, but because I chose to. My territory is secure because I will it to be. It always is.",
   },
   "chill-cat": {
     default: "There was a trampoline. I sniffed it. Went through some bushes. Stared at a tree. Ate kibble outside. Met another cat. Walked through some woods. It was a day. I was in it.",
