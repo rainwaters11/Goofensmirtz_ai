@@ -17,7 +17,6 @@ import {
   Loader2,
   PawPrint,
 } from "lucide-react";
-import { SectionHeader } from "../../../components/section-header";
 import { ProcessingStatusCard } from "../../../components/projects/processing-status-card";
 import { AskMyPetPanel } from "../../../components/ask-my-pet-panel";
 import { Button } from "../../../components/ui/button";
@@ -25,6 +24,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui
 import { Badge } from "../../../components/ui/badge";
 import type { Session, SessionEvent, SessionInsights, PetRecap } from "@pet-pov/db";
 import { fetchSession, fetchInsights, fetchRecap, generateVoice } from "../../../lib/api";
+import { createClient } from "../../../lib/supabase/client";
+import { SessionProcessingView } from "../../../components/session-processing-view";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -116,6 +117,9 @@ export default function SessionDetailPage({
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [audioFallback, setAudioFallback] = useState(false);
 
+  // Realtime: story-ready toast
+  const [showStoryReady, setShowStoryReady] = useState(false);
+
   // Ref to scroll to the Character / narration section after generation
   const characterSectionRef = useRef<HTMLDivElement>(null);
 
@@ -143,6 +147,58 @@ export default function SessionDetailPage({
       .then(setInsights)
       .catch((err) => console.warn("Insights fetch failed:", err))
       .finally(() => setLoadingInsights(false));
+  }, [sessionId]);
+
+  // ── Supabase Realtime subscription ────────────────────────────────────────
+  useEffect(() => {
+    if (!sessionId) return;
+
+    const supabase = createClient();
+
+    const channel = supabase
+      .channel(`session-status-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "sessions",
+          filter: `id=eq.${sessionId}`,
+        },
+        (payload) => {
+          const newStatus = (payload.new as { status?: string; title?: string }).status;
+
+          // Update local session state regardless of status
+          setSession((prev) =>
+            prev ? { ...prev, ...payload.new } as Session : prev
+          );
+
+          if (newStatus === "complete") {
+            // Show the "Story Ready!" toast, then kick a full data reload
+            setShowStoryReady(true);
+            setTimeout(() => setShowStoryReady(false), 4000);
+
+            // Re-fetch all data so the full story UI renders
+            setTimeout(() => {
+              fetchSession(sessionId)
+                .then((data) => {
+                  setSession(data.session);
+                  setEvents(data.events);
+                })
+                .catch(console.warn);
+
+              fetchInsights(sessionId)
+                .then(setInsights)
+                .catch(console.warn);
+            }, 600);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [sessionId]);
 
   // Fetch recap (re-fetches when persona changes)
@@ -223,6 +279,23 @@ export default function SessionDetailPage({
 
   const activePersona = PERSONA_OPTIONS.find((p) => p.id === activePersonaId) ?? PERSONA_OPTIONS[0]!;
 
+  // ── Processing state: show pipeline progress while worker runs ───────────
+  const isProcessing =
+    !loadingSession &&
+    session &&
+    session.status !== "complete" &&
+    session.status !== "error";
+
+  if (isProcessing && session) {
+    return (
+      <SessionProcessingView
+        sessionId={session.id}
+        sessionTitle={session.title}
+        status={session.status}
+      />
+    );
+  }
+
   // ── Error state ───────────────────────────────────────────────────────────
   if (error && !session) {
     return (
@@ -241,6 +314,29 @@ export default function SessionDetailPage({
 
   return (
     <div className="flex flex-col gap-8 pb-12">
+      {/* ── Story Ready toast (realtime) ─────────── */}
+      {showStoryReady && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 animate-fade-in-up"
+        >
+          <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-white px-5 py-3.5 shadow-xl shadow-emerald-500/10">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100">
+              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                <Sparkles className="h-3.5 w-3.5 text-primary" />
+                Story Ready!
+              </span>
+              <span className="text-xs text-muted-foreground">
+                Loading your pet&apos;s perspective…
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Back + header ─────────────────────────────── */}
       <div className="flex flex-col gap-3">
         <Link
