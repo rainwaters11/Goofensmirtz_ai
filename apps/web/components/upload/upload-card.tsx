@@ -12,8 +12,6 @@ import {
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { createClient } from "../../lib/supabase/client";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -128,18 +126,12 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
     }
 
     // ④ Get the storage URL for the session record
+    // Store the public URL; the worker uses service-role key to access private files.
     const { data: urlData } = supabase.storage
       .from("videos")
       .getPublicUrl(storageData.path);
 
-    // For private buckets getPublicUrl returns the path-based URL
-    // We store the full Supabase storage URL — the worker will use the service
-    // role key to download the file via the signed URL pattern.
-    const { data: signedUrlData } = await supabase.storage
-      .from("videos")
-      .createSignedUrl(storageData.path, 60 * 60 * 24); // 24-hour signed URL for worker
-
-    const videoUrl = signedUrlData?.signedUrl ?? urlData.publicUrl;
+    const videoUrl = urlData.publicUrl;
 
     // ⑤ Create the session DB record
     setStage({ status: "creating_record" });
@@ -148,7 +140,7 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
       .from("sessions")
       .insert({
         id: sessionId,
-        owner_id: userId,
+        owner_id: user.id,   // use live auth user, not stale prop
         pet_id: petId,
         title: sessionTitle,
         video_url: videoUrl,
@@ -165,27 +157,17 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
       return;
     }
 
-    // ⑥ Also trigger the API worker pipeline (fire-and-forget)
-    // The existing worker polls for sessions with status=processing
-    // We hit the API to enqueue this session into the pipeline_jobs queue.
-    try {
-      const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
-      await fetch(`${apiBase}/api/sessions/${sessionId}/enqueue`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sessionId, videoUrl, petId }),
-      }).catch(() => {
-        // Non-fatal — worker will pick it up via polling
-        console.warn("[upload] /api/sessions/enqueue not available, worker will poll.");
-      });
-    } catch {
-      // Non-fatal — best effort
-    }
+    console.log("[upload] Session row created:", sessionId, "owner:", user.id);
+
+    console.log("[upload] Session created — session page will trigger Gemini analysis on load.");
 
     // ⑦ Success → redirect to session page
     setStage({ status: "done", sessionId });
 
     setTimeout(() => {
+      // 🔑 Cache buster — router.refresh() forces Next.js to bypass client-side
+      // cache and re-fetch server component data fresh from Supabase, eliminating 404s.
+      router.refresh();
       router.push(`/sessions/${sessionId}`);
     }, 800);
   }
@@ -206,26 +188,39 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
     }
   })();
 
+  const uploadProgress = stage.status === "uploading" ? stage.progress : 0;
+
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-5">
 
-      {/* ── Drop zone ──────────────────────────────────────── */}
+      {/* ── Claymorphism Drop Zone ─────────────────────────── */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => !isWorking && fileRef.current?.click()}
         className={cn(
-          "relative flex cursor-pointer flex-col items-center justify-center gap-5 rounded-2xl border-2 border-dashed px-8 py-16 text-center transition-all duration-200",
+          "relative flex cursor-pointer flex-col items-center justify-center gap-5 rounded-3xl transition-all duration-200",
+          "border-2 border-dashed px-8 py-14 text-center",
           dragging
-            ? "border-primary bg-primary/5 scale-[1.01]"
+            ? "border-primary scale-[1.01]"
             : file
-              ? "border-primary/50 bg-gradient-to-b from-primary/5 to-transparent"
-              : "border-border bg-muted/20 hover:border-primary/40 hover:bg-muted/40",
-          isWorking && "cursor-not-allowed opacity-80"
+              ? "border-primary/40"
+              : "border-orange-300 hover:border-primary/50",
+          isWorking && "cursor-not-allowed opacity-90"
         )}
+        style={{
+          background: dragging
+            ? "rgba(249,115,22,0.06)"
+            : file
+            ? "linear-gradient(135deg, rgba(249,115,22,0.04) 0%, rgba(255,247,237,1) 100%)"
+            : "rgba(255,247,237,0.8)",
+          boxShadow: dragging
+            ? "0 0 0 4px rgba(249,115,22,0.15), inset 0 0 24px rgba(249,115,22,0.06), 6px 6px 20px rgba(249,115,22,0.1)"
+            : "6px 6px 20px rgba(249,115,22,0.08), -2px -2px 8px rgba(255,255,255,0.9)",
+        }}
       >
         <input
           ref={fileRef}
@@ -237,8 +232,8 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
           disabled={isWorking}
         />
 
-        {/* Persona watermark */}
-        <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-black/5 px-2.5 py-1 text-[10px] font-semibold text-muted-foreground">
+        {/* Persona watermark badge */}
+        <div className="pointer-events-none absolute right-4 top-4 flex items-center gap-1.5 rounded-full bg-orange-100 border border-orange-200 px-2.5 py-1 text-[10px] font-bold text-primary shadow-sm">
           <Sparkles className="h-3 w-3" />
           {personaName} will narrate
         </div>
@@ -247,36 +242,38 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
           <>
             {/* File selected state */}
             <div className="relative">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
+              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 border-2 border-primary/20 shadow-sm">
                 <Video className="h-8 w-8 text-primary" strokeWidth={1.5} />
               </div>
-              <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-                <CheckCircle2 className="h-3 w-3" />
+              <div className="absolute -bottom-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 shadow-md border-2 border-white">
+                <CheckCircle2 className="h-3.5 w-3.5 text-white" />
               </div>
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">{file.name}</p>
+              <p className="text-sm font-bold text-foreground">{file.name}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{formatBytes(file.size)}</p>
             </div>
             {!isWorking && (
-              <p className="text-xs text-muted-foreground">Click to change file</p>
+              <span className="text-xs text-muted-foreground font-medium underline underline-offset-2">
+                Click to change file
+              </span>
             )}
           </>
         ) : (
           <>
             {/* Empty state */}
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-              <Upload className="h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-100 border-2 border-orange-200 shadow-sm">
+              <Upload className="h-8 w-8 text-primary" strokeWidth={1.5} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-foreground">
-                Drag & drop {petName}&apos;s footage here
+              <p className="text-base font-bold text-foreground">
+                {dragging ? `Drop it — ${petName} can't wait!` : `Drag & drop ${petName}'s footage here`}
               </p>
               <p className="mt-1 text-xs text-muted-foreground">
                 MP4, MOV, or WebM · up to 500 MB
               </p>
             </div>
-            <span className="rounded-xl border border-border bg-background px-5 py-2 text-sm font-medium text-foreground hover:bg-accent transition-colors">
+            <span className="clay-option rounded-xl border-2 border-orange-200 bg-white px-5 py-2 text-sm font-bold text-primary shadow-sm">
               Browse files
             </span>
           </>
@@ -285,36 +282,43 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
 
       {/* ── Session title ──────────────────────────────────── */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="upload-title" className="text-sm font-medium text-foreground">
+        <label htmlFor="upload-title" className="text-sm font-semibold text-foreground">
           Session title
           <span className="ml-1.5 text-xs font-normal text-muted-foreground">(optional)</span>
         </label>
-        <Input
+        <input
           id="upload-title"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={`e.g. ${petName}'s wild Tuesday at the park`}
           disabled={isWorking}
-          className="rounded-xl"
+          className="clay-input w-full px-4 py-3 text-sm"
         />
       </div>
 
-      {/* ── Progress indicator ─────────────────────────────── */}
+      {/* ── Clay Progress Indicator ─────────────────────────── */}
       {isWorking && (
-        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+        <div
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5"
+          style={{
+            background: "linear-gradient(135deg, rgba(249,115,22,0.06) 0%, rgba(255,247,237,1) 100%)",
+            border: "2.5px solid rgba(249,115,22,0.2)",
+            boxShadow: "4px 4px 14px rgba(249,115,22,0.1), -1px -1px 4px rgba(255,255,255,0.8)",
+          }}
+        >
           {stage.status === "done" ? (
             <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
           ) : (
             <Loader2 className="h-5 w-5 shrink-0 animate-spin text-primary" />
           )}
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-medium text-foreground">{progressLabel}</p>
+          <div className="flex flex-col gap-1 flex-1">
+            <p className="text-sm font-bold text-foreground">{progressLabel}</p>
             {stage.status === "uploading" && (
-              <div className="h-1.5 w-full overflow-hidden rounded-full bg-primary/15">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-orange-100 border border-orange-200">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-300 animate-pulse"
-                  style={{ width: "60%" }}
+                  className="h-full rounded-full bg-gradient-to-r from-orange-400 to-amber-500 transition-all duration-500 animate-pulse"
+                  style={{ width: uploadProgress > 0 ? `${uploadProgress}%` : "65%" }}
                 />
               </div>
             )}
@@ -324,10 +328,10 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
 
       {/* ── Error ─────────────────────────────────────────── */}
       {stage.status === "error" && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+        <div className="flex items-start gap-3 rounded-2xl border-2 border-red-200 bg-red-50 px-4 py-3.5 shadow-sm">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
           <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-semibold text-red-800">Upload failed</p>
+            <p className="text-sm font-bold text-red-800">Upload failed</p>
             <p className="text-xs text-red-700">{stage.message}</p>
           </div>
         </div>
@@ -335,8 +339,14 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
 
       {/* ── What happens next ────────────────────────── */}
       {!isWorking && (
-        <div className="flex flex-col gap-2 rounded-xl border border-dashed border-muted-foreground/20 bg-muted/10 px-4 py-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+        <div
+          className="flex flex-col gap-3 rounded-2xl px-4 py-4"
+          style={{
+            border: "2px dashed rgba(249,115,22,0.22)",
+            background: "rgba(255,247,237,0.6)",
+          }}
+        >
+          <p className="text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
             What happens next
           </p>
           <div className="grid grid-cols-3 gap-3">
@@ -347,32 +357,31 @@ export function UploadDropzone({ userId, petId, petName, personaName }: UploadDr
             ].map(({ step, icon, label }) => (
               <div key={step} className="flex flex-col items-center gap-1.5 text-center">
                 <div className="text-2xl">{icon}</div>
-                <p className="text-[10px] leading-tight text-muted-foreground">{label}</p>
+                <p className="text-[10px] leading-tight text-muted-foreground font-medium">{label}</p>
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Submit ─────────────────────────────────────────── */}
-      <Button
+      {/* ── Submit CTA ─────────────────────────────────────── */}
+      <button
         type="submit"
-        size="lg"
         disabled={!file || isWorking}
-        className="w-full rounded-xl text-base font-semibold"
+        className="clay-button w-full flex items-center justify-center gap-2 py-4 text-base disabled:opacity-40 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none"
       >
         {isWorking ? (
           <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
             {progressLabel}
           </>
         ) : (
           <>
-            <Sparkles className="mr-2 h-5 w-5" />
+            <Sparkles className="h-5 w-5" />
             Analyze {petName}&apos;s footage
           </>
         )}
-      </Button>
+      </button>
     </form>
   );
 }

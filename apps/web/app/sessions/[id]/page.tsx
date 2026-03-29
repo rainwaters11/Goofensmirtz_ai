@@ -23,7 +23,7 @@ import { Button } from "../../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../components/ui/card";
 import { Badge } from "../../../components/ui/badge";
 import type { Session, SessionEvent, SessionInsights, PetRecap } from "@pet-pov/db";
-import { fetchSession, fetchInsights, fetchRecap, generateVoice } from "../../../lib/api";
+import { fetchInsights, fetchRecap, generateVoice } from "../../../lib/api";
 import { createClient } from "../../../lib/supabase/client";
 import { SessionProcessingView } from "../../../components/session-processing-view";
 
@@ -135,19 +135,50 @@ export default function SessionDetailPage({
   useEffect(() => {
     if (!sessionId) return;
 
-    fetchSession(sessionId)
-      .then((data) => {
-        setSession(data.session);
-        setEvents(data.events);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoadingSession(false));
+    // Fetch the session row directly from Supabase — no Express proxy needed.
+    // The upload card already wrote the row; we just need to read it back.
+    const supabase = createClient();
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("sessions")
+          .select("*")
+          .eq("id", sessionId)
+          .single();
+        if (error || !data) {
+          setError("Session not found");
+        } else {
+          setSession(data as Session);
+          setEvents([]);
+
+          // ── Auto-trigger Gemini analysis if still processing ──────────────
+          // The upload card fires this fetch, but it gets aborted when the browser
+          // navigates away. We re-trigger it here so it runs while the user watches
+          // the session page — the full 35s analysis lives inside this component.
+          if ((data as Session & { status: string }).status === "processing" && (data as Session & { video_url?: string }).video_url) {
+            const videoUrl = (data as Session & { video_url?: string }).video_url!;
+            console.log("[session-page] Status=processing — triggering Gemini analysis");
+            fetch("/api/process-session", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sessionId, videoUrl }),
+            })
+              .then((r) => r.json())
+              .then((result) => console.log("[session-page] Analysis done:", result))
+              .catch((err) => console.warn("[session-page] Analysis failed:", err));
+          }
+        }
+      } finally {
+        setLoadingSession(false);
+      }
+    })();
 
     fetchInsights(sessionId)
       .then(setInsights)
       .catch((err) => console.warn("Insights fetch failed:", err))
       .finally(() => setLoadingInsights(false));
   }, [sessionId]);
+
 
   // ── Supabase Realtime subscription ────────────────────────────────────────
   useEffect(() => {
@@ -178,14 +209,15 @@ export default function SessionDetailPage({
             setShowStoryReady(true);
             setTimeout(() => setShowStoryReady(false), 4000);
 
-            // Re-fetch all data so the full story UI renders
-            setTimeout(() => {
-              fetchSession(sessionId)
-                .then((data) => {
-                  setSession(data.session);
-                  setEvents(data.events);
-                })
-                .catch(console.warn);
+            // Re-fetch from Supabase directly on completion
+            setTimeout(async () => {
+              const sb = createClient();
+              const { data } = await sb
+                .from("sessions")
+                .select("*")
+                .eq("id", sessionId)
+                .single();
+              if (data) { setSession(data as Session); setEvents([]); }
 
               fetchInsights(sessionId)
                 .then(setInsights)
@@ -308,6 +340,15 @@ export default function SessionDetailPage({
             Back to sessions
           </Link>
         </Button>
+      </div>
+    );
+  }
+  // ── Loading state: show spinner until session resolves ───────────────────
+  if (!sessionId || loadingSession) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-3 py-32 text-muted-foreground">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-sm">Loading session…</p>
       </div>
     );
   }

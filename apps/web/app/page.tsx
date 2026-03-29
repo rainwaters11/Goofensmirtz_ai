@@ -27,7 +27,7 @@ export default async function HomePage() {
   // 2. Pet check
   const { data: pet } = await supabase
     .from("pets")
-    .select("id, name, species, photo_url, default_persona_id")
+    .select("id, name, species, photo_url, original_image_url, persona_avatar_url, default_persona_id")
     .eq("owner_id", user.id)
     .maybeSingle();
 
@@ -53,7 +53,13 @@ export default async function HomePage() {
   // 4. Success — render full dashboard
   return (
     <DashboardClient
-      pet={{ id: pet.id, name: pet.name, species: pet.species }}
+      pet={{
+        id: pet.id,
+        name: pet.name,
+        species: pet.species,
+        originalImageUrl: pet.original_image_url ?? undefined,
+        personaAvatarUrl: pet.persona_avatar_url ?? undefined,
+      }}
       sessions={sessions}
       userEmail={user.email ?? ""}
     />

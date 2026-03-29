@@ -30,6 +30,10 @@ import {
 } from "@pet-pov/personas";
 import type { Persona, SessionInsights, PetRecap } from "@pet-pov/db";
 import {
+  getSupabaseServiceClient,
+  getSessionById,
+} from "@pet-pov/db";
+import {
   DEMO_SESSION_ID,
   DEMO_SESSION,
   DEMO_SESSION_EVENTS,
@@ -229,6 +233,7 @@ router.get("/:id", async (req, res, _next) => {
   try {
     const { id } = req.params;
 
+    // ── Demo session — serve from static seed data ──────────────────────────
     if (id === DEMO_SESSION_ID) {
       res.json({
         session: DEMO_SESSION,
@@ -237,13 +242,24 @@ router.get("/:id", async (req, res, _next) => {
       return;
     }
 
-    res.status(404).json({ error: "Session not found" });
-  } catch (err) {
-    console.error("[sessions/:id] Unexpected error, returning demo fallback:", err);
+    // ── Real session — fetch from Supabase using service-role client ────────
+    // Service-role bypasses RLS so the API can read any session.
+    // The session page's Realtime subscription handles live status updates.
+    const db = getSupabaseServiceClient();
+    const session = await getSessionById(db, id);
+
+    if (!session) {
+      res.status(404).json({ error: "Session not found" });
+      return;
+    }
+
     res.json({
-      session: DEMO_SESSION,
-      events: DEMO_SESSION_EVENTS,
+      session,
+      events: [], // events are populated by the worker via pipeline_jobs
     });
+  } catch (err) {
+    console.error("[sessions/:id] Unexpected error:", err);
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -289,14 +305,15 @@ router.get("/:id/recap", async (req, res, _next) => {
 
     let narrationScript: string;
 
-    if (process.env["OPENAI_API_KEY"]) {
+    if (process.env["GROQ_API_KEY"]) {
       try {
         const toon = encodeEvents(events);
         const systemPrompt = buildNarrationSystemPrompt(persona);
         const userMessage = buildNarrationUserMessage(toon);
-        narrationScript = await generateChatCompletion(systemPrompt, userMessage);
+        // llama-3.3-70b-versatile for story/narration — better creative writing
+        narrationScript = await generateChatCompletion(systemPrompt, userMessage, "llama-3.3-70b-versatile");
       } catch (llmError) {
-        console.warn("[recap] LLM generation failed, using fallback:", llmError);
+        console.warn("[recap] Groq generation failed, using fallback:", llmError);
         narrationScript = FALLBACK_NARRATIONS[personaId] ?? FALLBACK_NARRATIONS["dramatic-dog"]!;
       }
     } else {
@@ -558,18 +575,19 @@ router.post("/:id/ask", async (req, res, _next) => {
       petSpecies
     );
 
-    // ── Call OpenAI (with fallback) ─────────────────────────────────────────
+    // ── Call Groq / Llama 3 (with fallback) ────────────────────────────────
     let petResponse: string;
 
-    if (process.env["OPENAI_API_KEY"]) {
+    if (process.env["GROQ_API_KEY"]) {
       try {
-        petResponse = await generateChatCompletion(systemPrompt, question);
+        // llama-3.1-8b-instant for lightning-fast persona chat responses
+        petResponse = await generateChatCompletion(systemPrompt, question, "llama-3.1-8b-instant");
       } catch (llmError) {
-        console.warn("[sessions/:id/ask] LLM generation failed, using fallback:", llmError);
+        console.warn("[sessions/:id/ask] Groq generation failed, using fallback:", llmError);
         petResponse = getFallbackResponse(personaId, question);
       }
     } else {
-      console.info("[sessions/:id/ask] No OPENAI_API_KEY — using fallback response");
+      console.info("[sessions/:id/ask] No GROQ_API_KEY — using fallback response");
       petResponse = getFallbackResponse(personaId, question);
     }
 

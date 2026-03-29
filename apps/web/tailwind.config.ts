@@ -74,7 +74,8 @@ const config: Config = {
       },
 
       fontFamily: {
-        sans: ["Inter", "system-ui", "ui-sans-serif", "sans-serif"],
+        sans:    ["var(--font-nunito)", "Nunito", "system-ui", "ui-sans-serif", "sans-serif"],
+        display: ["var(--font-fredoka)", "Fredoka", "system-ui", "ui-sans-serif", "sans-serif"],
       },
 
       transitionDuration: {

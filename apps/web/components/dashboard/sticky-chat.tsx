@@ -19,6 +19,8 @@ interface StickyChatProps {
   petEmoji?: string;
   /** Last session ID to use as context for "Ask My Pet" */
   latestSessionId: string;
+  /** AI-generated stylized avatar URL — shown in chat bubbles */
+  personaAvatarUrl?: string | undefined;
 }
 
 // ── Suggested starters ────────────────────────────────────────────────────────
@@ -32,7 +34,7 @@ const STARTERS = [
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export function StickyChat({ petName, petEmoji = "🐾", latestSessionId }: StickyChatProps) {
+export function StickyChat({ petName, petEmoji = "🐾", latestSessionId, personaAvatarUrl }: StickyChatProps) {
   const [open, setOpen] = useState(false);
   const [conversation, setConversation] = useState<Turn[]>([]);
   const [input, setInput] = useState("");
@@ -176,9 +178,17 @@ export function StickyChat({ petName, petEmoji = "🐾", latestSessionId }: Stic
             {/* Pet bubble */}
             {turn.response ? (
               <div className="flex items-end gap-2">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 border border-amber-200 text-sm">
-                  {petEmoji}
-                </div>
+                {personaAvatarUrl ? (
+                  <img
+                    src={personaAvatarUrl}
+                    alt={petName}
+                    className="h-7 w-7 shrink-0 rounded-full object-cover border border-amber-200"
+                  />
+                ) : (
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 border border-amber-200 text-sm">
+                    {petEmoji}
+                  </div>
+                )}
                 <div className="max-w-[80%] rounded-2xl rounded-bl-md bg-white border border-border px-3.5 py-2 shadow-sm">
                   <p className="text-xs leading-relaxed text-foreground">{turn.response}</p>
                   <div className="mt-1.5 flex items-center justify-between gap-2">
@@ -200,9 +210,17 @@ export function StickyChat({ petName, petEmoji = "🐾", latestSessionId }: Stic
         {/* Typing indicator */}
         {isLoading && (
           <div className="flex items-end gap-2 animate-fade-in-up">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 border border-amber-200 text-sm">
-              {petEmoji}
-            </div>
+            {personaAvatarUrl ? (
+              <img
+                src={personaAvatarUrl}
+                alt={petName}
+                className="h-7 w-7 shrink-0 rounded-full object-cover border border-amber-200"
+              />
+            ) : (
+              <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 border border-amber-200 text-sm">
+                {petEmoji}
+              </div>
+            )}
             <div className="rounded-2xl rounded-bl-md bg-white border border-border px-4 py-2.5 shadow-sm">
               <div className="flex items-center gap-1.5">
                 {[0, 150, 300].map((delay) => (

@@ -53,12 +53,21 @@ export interface AskPetResponse {
 export async function askPet(
   sessionId: string,
   question: string,
-  persona?: string
+  persona?: string,
+  petName?: string,
+  petSpecies?: string
 ): Promise<AskPetResponse> {
-  const res = await fetch(`${API_BASE}/api/sessions/${sessionId}/ask`, {
+  // Use the Next.js API route — it queries Supabase directly and uses Groq
+  const res = await fetch(`/api/ask-pet`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question, ...(persona ? { persona } : {}) }),
+    body: JSON.stringify({
+      sessionId,
+      question,
+      personaId: persona,
+      petName,
+      petSpecies,
+    }),
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));

@@ -11,6 +11,7 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.12.0",
     "@pet-pov/ai": "workspace:*",
     "@pet-pov/db": "workspace:*",
     "@pet-pov/personas": "workspace:*",
