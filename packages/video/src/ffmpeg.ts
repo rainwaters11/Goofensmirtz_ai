@@ -1,11 +1,13 @@
 import ffmpeg from "fluent-ffmpeg";
+import ffmpegStatic from "ffmpeg-static";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-// Honor FFMPEG_PATH env var so constrained environments (Modal, Railway, Docker)
-// can point to a specific binary rather than relying on $PATH.
+// Priority: FFMPEG_PATH env var > ffmpeg-static bundled binary > system $PATH
 if (process.env["FFMPEG_PATH"]) {
   ffmpeg.setFfmpegPath(process.env["FFMPEG_PATH"]);
+} else if (ffmpegStatic) {
+  ffmpeg.setFfmpegPath(ffmpegStatic as unknown as string);
 }
 
 export interface ExtractedFrame {
