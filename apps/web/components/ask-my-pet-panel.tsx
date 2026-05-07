@@ -5,6 +5,8 @@ import { Send, Loader2, MessageSquare, Sparkles, Volume2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { askPet } from "../lib/api";
+import { createClient } from "../lib/supabase/client";
+import type { ConversationTurn } from "@pet-pov/db";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,6 +55,7 @@ export function AskMyPetPanel({
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +70,31 @@ export function AskMyPetPanel({
   useEffect(() => {
     setMessages([]);
     setError(null);
+    setHistoryLoaded(false);
   }, [personaId]);
+
+  // Load past conversation turns on mount (per persona)
+  useEffect(() => {
+    if (!sessionId) return;
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase
+        .from("conversation_turns")
+        .select("*")
+        .eq("session_id", sessionId)
+        .eq("persona_id", personaId)
+        .order("created_at", { ascending: true });
+      if (data && data.length > 0) {
+        setMessages(
+          (data as ConversationTurn[]).flatMap((t) => [
+            { id: `hist-user-${t.id}`, role: "user" as const, content: t.user_message },
+            { id: `hist-pet-${t.id}`, role: "pet" as const, content: t.pet_response, personaName },
+          ])
+        );
+      }
+      setHistoryLoaded(true);
+    })();
+  }, [sessionId, personaId]);
 
   async function handleSubmit(e?: FormEvent, overrideMessage?: string) {
     e?.preventDefault();
@@ -139,10 +166,26 @@ export function AskMyPetPanel({
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-violet-100 border border-violet-200">
                 <Sparkles className="h-5 w-5 text-violet-600" />
               </div>
-              <p className="text-sm text-muted-foreground text-center max-w-xs">
-                Ask {petName} about their day — try a suggestion below or type
-                your own question!
-              </p>
+              {historyLoaded ? (
+                <>
+                  <p className="text-sm text-muted-foreground text-center max-w-xs">
+                    No memories yet! Break the ice — {petName} is ready to talk.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => handleChipClick(`What were you thinking about that treat?`)}
+                    disabled={isLoading}
+                    className="inline-flex items-center gap-1.5 rounded-full border border-violet-300 bg-violet-100 px-4 py-1.5 text-sm font-semibold text-violet-800 transition-all hover:bg-violet-200 disabled:opacity-50 cursor-pointer"
+                  >
+                    <span>✨</span> &ldquo;What were you thinking about that treat?&rdquo;
+                  </button>
+                </>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center max-w-xs">
+                  Ask {petName} about their day — try a suggestion below or type
+                  your own question!
+                </p>
+              )}
             </div>
           )}
 

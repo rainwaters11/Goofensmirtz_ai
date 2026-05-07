@@ -1,74 +1,102 @@
 import type { Job } from "bullmq";
-import { getSupabaseServiceClient, updateVideoStatus, getPersonaById } from "@pet-pov/db";
+import { getSupabaseServiceClient, updateSessionStatus, getPersonaById } from "@pet-pov/db";
 import { generateChatCompletion } from "@pet-pov/ai";
 import { buildNarrationSystemPrompt, buildNarrationUserMessage } from "@pet-pov/ai";
+import { Queue } from "bullmq";
+
+const pipelineQueue = new Queue("pipeline", {
+  connection: { url: process.env["REDIS_URL"] ?? "redis://localhost:6379" },
+});
 
 export interface NarrationJobData {
-  videoId: string;  // NOTE: use sessionId in new jobs — videoId is legacy field name here
+  videoId: string;
   personaId: string;
-  toon: string; // Pre-encoded TOON string passed from the toon-conversion step
+  toon: string;
 }
 
 /**
  * JOB: narration
  *
  * Takes a TOON-encoded event string and a persona ID,
- * generates a narration script using OpenAI GPT-4o, and stores it in the DB.
- *
- * This is Step 6 of the Experience Recap pipeline.
- *
- * INPUT (job.data):
- *   - videoId: string UUID — the session ID (named videoId for legacy compat)
- *   - personaId: string UUID — the persona to narrate as
- *   - toon: string — pre-encoded TOON from the toon-conversion job (in-memory handoff)
- *
- * OUTPUT:
- *   - Script stored in `narrations` table (video_id, persona_id, script)
- *   - Session status updated to "narrated"
- *
- * RULES:
- *   - Uses TOON as input (never raw JSON)
- *   - Persona must be fetched from DB (never hardcoded)
- *   - Returns only the script text — audio synthesis happens in voice-synthesis job
+ * generates a narration script using GPT-4o / Llama, stores it in the DB,
+ * and chains to voice-synthesis.
  */
 export async function narrationJob(job: Job): Promise<void> {
   const { videoId, personaId, toon } = job.data as NarrationJobData;
   const db = getSupabaseServiceClient();
 
+  console.log(`[narration] Starting for session ${videoId}`);
   await job.updateProgress(10);
 
-  // Fetch persona — already implemented
+  // ── 1. Fetch persona ───────────────────────────────────────────────────────
   const persona = await getPersonaById(db, personaId);
-  if (!persona) throw new Error(`Persona not found: ${personaId}`);
+  if (!persona) throw new Error(`[narration] Persona not found: ${personaId}`);
 
   await job.updateProgress(30);
 
-  // Build prompts and generate script — already implemented
-  const systemPrompt = buildNarrationSystemPrompt(persona);
+  // ── 2. Fetch pet name + species for grounding ─────────────────────────────
+  const { data: sessionRow } = await db
+    .from("sessions")
+    .select("pet_id")
+    .eq("id", videoId)
+    .single();
+
+  let petName = "the pet";
+  let species = "animal";
+  if (sessionRow?.pet_id) {
+    const { data: petRow } = await db
+      .from("pets")
+      .select("name, species")
+      .eq("id", sessionRow.pet_id)
+      .single();
+    petName = petRow?.name ?? "the pet";
+    species = petRow?.species ?? "animal";
+  }
+
+  // ── 3. Build prompts ───────────────────────────────────────────────────────
+  const baseSystemPrompt = buildNarrationSystemPrompt(persona);
+  const systemPrompt = [
+    baseSystemPrompt,
+    "",
+    "── PET IDENTITY (critical) ──",
+    `Pet name: ${petName}`,
+    `Species: ${species}`,
+    `Rule: You are narrating from the perspective of a ${species} named ${petName}.`,
+    `Never refer to this pet as any other species or name.`,
+  ].join("\n");
   const userMessage = buildNarrationUserMessage(toon);
 
-  const script = await generateChatCompletion(systemPrompt, userMessage);
+  // ── 4. Generate narration script ───────────────────────────────────────────
+  const script = await generateChatCompletion(systemPrompt, userMessage, "llama-3.3-70b-versatile");
   console.log(`[narration] Generated script (${script.length} chars) for session ${videoId}`);
 
   await job.updateProgress(70);
 
-  // TODO [Phase 3]: Store the narration script in the narrations table.
-  //   INPUT:  videoId (sessionId), personaId, script
-  //   OUTPUT: narration record with narration.id — needed by voice-synthesis job
-  //   SERVICE: Supabase `narrations` table
-  //   NOTE: The `narrations` table uses `video_id` column (legacy column name — maps to session ID)
-  //
-  // const { data: narration, error } = await db
-  //   .from("narrations")
-  //   .insert({ video_id: videoId, persona_id: personaId, script, voice_url: null })
-  //   .select()
-  //   .single();
-  // if (error) throw new Error(`Failed to store narration: ${error.message}`);
-  //
-  // TODO [Phase 3]: Pass narration.id to the next job (voice-synthesis).
-  // Return it so the job chain can pick it up:
-  // return { narrationId: narration.id };
+  // ── 5. Persist narration to `narrations` table ────────────────────────────
+  const { data: narration, error: narrationError } = await db
+    .from("narrations")
+    .insert({ video_id: videoId, persona_id: personaId, script, voice_url: null })
+    .select()
+    .single();
 
-  await updateVideoStatus(db, videoId, "narrated");
+  if (narrationError || !narration) {
+    throw new Error(`[narration] Failed to store narration for ${videoId}: ${narrationError?.message}`);
+  }
+
+  console.log(`[narration] Stored narration ${narration.id} for session ${videoId}`);
+
+  // ── 6. Update session status ───────────────────────────────────────────────
+  await updateSessionStatus(db, videoId, "narrated");
+  await job.updateProgress(85);
+
+  // ── 7. Chain to voice-synthesis ───────────────────────────────────────────
+  const nextJob = await pipelineQueue.add(
+    "voice-synthesis",
+    { videoId, narrationId: narration.id },
+    { attempts: 3, backoff: { type: "exponential", delay: 2000 } }
+  );
+  console.log(`[narration] Enqueued voice-synthesis job ${nextJob.id} for session ${videoId}`);
+
   await job.updateProgress(100);
+  console.log(`[narration] Complete for session ${videoId}`);
 }

@@ -5,19 +5,21 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch --env-file=.env src/index.ts",
     "start": "node dist/index.js",
     "type-check": "tsc --noEmit",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "render:standalone": "tsx src/bin/render-standalone.ts"
   },
   "dependencies": {
     "@pet-pov/ai": "workspace:*",
     "@pet-pov/db": "workspace:*",
+    "@pet-pov/personas": "workspace:*",
     "@pet-pov/toon": "workspace:*",
     "@pet-pov/video": "workspace:*",
-    "@pet-pov/personas": "workspace:*",
     "bullmq": "^5.7.0",
-    "cloudinary": "^2.2.0"
+    "cloudinary": "^2.2.0",
+    "modal": "^0.7.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

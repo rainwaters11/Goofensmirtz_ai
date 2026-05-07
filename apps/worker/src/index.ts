@@ -1,4 +1,5 @@
 import { Worker, type Job } from "bullmq";
+import { getSupabaseServiceClient, updateSessionError } from "@pet-pov/db";
 import { sceneExtractionJob } from "./jobs/scene-extraction.js";
 import { eventGenerationJob } from "./jobs/event-generation.js";
 import { toonConversionJob } from "./jobs/toon-conversion.js";
@@ -39,6 +40,17 @@ const jobDispatcher: Record<string, (job: Job) => Promise<unknown>> = {
   [JOB_CONVERSATION_GENERATION]: conversationGenerationJob,
 };
 
+// ─── Jobs that carry a videoId (sessionId) in their payload ──────────────────
+// These are the jobs where a failure should update sessions.status = 'error'.
+const SESSION_JOBS = new Set([
+  JOB_SCENE_EXTRACTION,
+  JOB_EVENT_GENERATION,
+  JOB_TOON_CONVERSION,
+  JOB_NARRATION,
+  JOB_VOICE_SYNTHESIS,
+  JOB_VIDEO_RENDER,
+]);
+
 // ─── Worker ───────────────────────────────────────────────────────────────────
 const worker = new Worker(
   QUEUE_PIPELINE,
@@ -60,10 +72,35 @@ worker.on("completed", (job) => {
   console.log(`[Worker] ✅ Completed job "${job.name}" (id=${job.id})`);
 });
 
-worker.on("failed", (job, err) => {
-  console.error(`[Worker] ❌ Failed job "${job?.name}" (id=${job?.id}):`, err.message);
+worker.on("failed", async (job, err) => {
+  console.error(
+    `[Worker] ❌ Failed job "${job?.name}" (id=${job?.id}) session=${job?.data?.videoId ?? "unknown"}:`,
+    err.message
+  );
+
+  // Only persist error state after all retries are exhausted
+  if (!job || job.attemptsMade < (job.opts.attempts ?? 1)) return;
+
+  const sessionId: string | undefined = job.data?.videoId;
+  if (!sessionId || !SESSION_JOBS.has(job.name)) return;
+
+  try {
+    const db = getSupabaseServiceClient();
+    await updateSessionError(
+      db,
+      sessionId,
+      `[${job.name}] ${err.message}`
+    );
+    console.error(
+      `[Worker] Persisted error state for session ${sessionId} (job=${job.id}): ${err.message}`
+    );
+  } catch (dbErr) {
+    // Don't throw — the job is already failed, DB write is best-effort
+    console.error(`[Worker] Failed to persist error state for session ${sessionId}:`, dbErr);
+  }
 });
 
 console.log(
   `🔧 Pet POV Worker started — queue: "${QUEUE_PIPELINE}", concurrency: ${CONCURRENCY}`
 );
+

@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { cn } from "../lib/utils";
 import { Sidebar } from "./sidebar";
 import { TopNav } from "./top-nav";
+import { createClient } from "../lib/supabase/client";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -20,6 +21,19 @@ interface AppShellProps {
  */
 export function AppShell({ children }: AppShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string | null; avatarUrl: string | null } | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) return;
+      setUser({
+        name: data.user.user_metadata?.full_name ?? null,
+        avatarUrl: data.user.user_metadata?.avatar_url ?? null,
+      });
+    })();
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -46,7 +60,7 @@ export function AppShell({ children }: AppShellProps) {
 
       {/* ── Main content area ───────────────────── */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <TopNav onMenuToggle={() => setSidebarOpen((v) => !v)} />
+        <TopNav onMenuToggle={() => setSidebarOpen((v) => !v)} {...(user ? { user } : {})} />
 
         <main
           className={cn(

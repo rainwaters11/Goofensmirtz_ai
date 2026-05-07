@@ -204,7 +204,15 @@ export default function SessionDetailPage({
             prev ? { ...prev, ...payload.new } as Session : prev
           );
 
-          if (newStatus === "complete") {
+          // Terminal states — show toast, re-fetch full data
+          const isTerminal =
+            newStatus === "complete" ||
+            newStatus === "events_extracted" ||
+            newStatus === "narrated" ||
+            newStatus === "voiced" ||
+            newStatus === "rendered";
+
+          if (isTerminal) {
             // Show the "Story Ready!" toast, then kick a full data reload
             setShowStoryReady(true);
             setTimeout(() => setShowStoryReady(false), 4000);
@@ -312,11 +320,15 @@ export default function SessionDetailPage({
   const activePersona = PERSONA_OPTIONS.find((p) => p.id === activePersonaId) ?? PERSONA_OPTIONS[0]!;
 
   // ── Processing state: show pipeline progress while worker runs ───────────
+  // Terminal states that should render the full detail view (not the spinner).
+  // "events_extracted" is the current end-of-pipeline state; downstream steps
+  // (toon, narration, voice, render) are not yet active in the worker.
+  const TERMINAL_STATUSES = new Set(["complete", "events_extracted", "narrated", "voiced", "rendered", "error"]);
+
   const isProcessing =
     !loadingSession &&
     session &&
-    session.status !== "complete" &&
-    session.status !== "error";
+    !TERMINAL_STATUSES.has(session.status);
 
   if (isProcessing && session) {
     return (
@@ -328,7 +340,56 @@ export default function SessionDetailPage({
     );
   }
 
-  // ── Error state ───────────────────────────────────────────────────────────
+  // ── Pipeline error — session exists but worker reported a failure ─────────
+  if (!loadingSession && session && session.status === "error") {
+    return (
+      <div className="flex flex-col gap-6 pb-12 animate-fade-in-up">
+        <Link
+          href="/"
+          className="flex w-fit items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to dashboard
+        </Link>
+        <div className="rounded-2xl border border-red-200 bg-red-50/60 px-8 py-10 flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-red-100 text-2xl">
+              ⚠️
+            </div>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl font-bold text-red-900">Processing failed</h1>
+              <p className="text-sm text-red-700">&ldquo;{session.title}&rdquo; could not be analysed.</p>
+            </div>
+          </div>
+          {session.error_message && (
+            <div className="rounded-xl border border-red-200 bg-white/60 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-red-500 mb-1">Error details</p>
+              <p className="text-sm text-red-800 font-mono leading-relaxed">{session.error_message}</p>
+            </div>
+          )}
+          <p className="text-sm text-red-700/80">
+            This can happen if the video file is corrupt or unsupported. Try uploading again with a different file.
+          </p>
+          <div className="flex items-center gap-3">
+            <Button asChild variant="outline" className="border-red-300 text-red-700 hover:bg-red-50">
+              <Link href="/">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to dashboard
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href="/upload">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Try again
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Not-found error — fetch returned no data ──────────────────────────────
   if (error && !session) {
     return (
       <div className="flex flex-col items-center justify-center gap-4 py-20">
@@ -455,14 +516,18 @@ export default function SessionDetailPage({
             </CardHeader>
             <CardContent className="pt-4">
               <div className="w-full max-w-2xl mx-auto px-0">
-                <div className="aspect-video rounded-xl overflow-hidden border border-neutral-800 bg-black">
+                <div className="aspect-video rounded-xl overflow-hidden border border-neutral-800 bg-black relative">
                   <video
+                    key={session?.rendered_video_url ?? "original"}
                     className="h-full w-full object-cover"
                     controls
                     playsInline
                     preload="metadata"
                   >
-                    <source src="/demo/catpov.mp4" type="video/mp4" />
+                    <source
+                      src={session?.rendered_video_url ?? session?.video_url ?? "/demo/catpov.mp4"}
+                      type="video/mp4"
+                    />
                     {/* Fallback if video cannot load */}
                     <div className="flex h-full items-center justify-center">
                       <div className="flex flex-col items-center gap-3 text-white">
@@ -473,6 +538,16 @@ export default function SessionDetailPage({
                       </div>
                     </div>
                   </video>
+                  {session?.rendered_video_url ? (
+                    <span className="absolute top-3 right-3 rounded-full bg-emerald-500/90 px-2.5 py-0.5 text-xs font-medium text-white">
+                      Final Recap
+                    </span>
+                  ) : session?.video_url && session?.status !== "error" ? (
+                    <span className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-black/70 px-2.5 py-0.5 text-xs font-medium text-white/80">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Recap processing…
+                    </span>
+                  ) : null}
                 </div>
               </div>
             </CardContent>
