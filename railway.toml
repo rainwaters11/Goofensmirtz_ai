@@ -1,8 +1,5 @@
-[project]
-name = "pet-pov-ai"
-
 [build]
 buildCommand = "pnpm install --frozen-lockfile && pnpm --filter './packages/**' build && pnpm --filter @pet-pov/worker build"
 
 [deploy]
-startCommand = "pnpm --filter @pet-pov/worker start"
+startCommand = "node apps/worker/dist/index.js"
