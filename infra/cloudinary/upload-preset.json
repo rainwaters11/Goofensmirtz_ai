@@ -1,0 +1,16 @@
+{
+  "_comment": "Cloudinary upload preset configuration for Pet POV AI. Apply via Cloudinary Dashboard > Settings > Upload > Upload presets.",
+  "name": "pet_pov_videos",
+  "unsigned": false,
+  "folder": "pet-pov/videos",
+  "allowed_formats": ["mp4", "mov", "webm"],
+  "resource_type": "video",
+  "max_bytes": 524288000,
+  "transformation": [
+    {
+      "quality": "auto",
+      "fetch_format": "mp4"
+    }
+  ],
+  "notification_url": "https://your-api.example.com/api/cloudinary/webhook"
+}

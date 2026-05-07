@@ -1,0 +1,27 @@
+{
+  "name": "@pet-pov/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@pet-pov/ai": "workspace:*",
+    "@pet-pov/db": "workspace:*",
+    "@pet-pov/toon": "workspace:*",
+    "@pet-pov/video": "workspace:*",
+    "@pet-pov/personas": "workspace:*",
+    "bullmq": "^5.7.0",
+    "cloudinary": "^2.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.0"
+  }
+}
