@@ -3,15 +3,15 @@ name = "pet-pov-ai"
 
 [services.api]
 root = "."
-build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/api build"
+dockerfile = "apps/api/Dockerfile"
 start = "pnpm --filter @pet-pov/api start"
 
 [services.web]
 root = "."
-build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/web build"
+dockerfile = "apps/web/Dockerfile"
 start = "pnpm --filter @pet-pov/web start"
 
 [services.worker]
 root = "."
-build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/worker build"
+dockerfile = "apps/worker/Dockerfile"
 start = "pnpm --filter @pet-pov/worker start"
