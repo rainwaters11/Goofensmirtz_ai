@@ -1,0 +1,14 @@
+{
+  "$schema": "https://schema.railpack.com",
+  "steps": {
+    "build": {
+      "commands": [
+        "pnpm --filter './packages/**' build",
+        "pnpm --filter @pet-pov/worker build"
+      ]
+    }
+  },
+  "deploy": {
+    "startCommand": "node apps/worker/dist/index.js"
+  }
+}
