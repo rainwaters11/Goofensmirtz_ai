@@ -78,7 +78,8 @@ export async function videoRenderJob(job: Job): Promise<void> {
   const { videoId, narrationId } = job.data as VideoRenderJobData;
 
   // ── Modal.com Delegation ────────────────────────────────────────────────
-  if (process.env.USE_MODAL_RENDER === "true") {
+  // Skip delegation if USE_MODAL_RENDER is false OR if we are already running on Modal
+  if (process.env.USE_MODAL_RENDER === "true" && !process.env.MODAL_ENVIRONMENT) {
     console.log(`[video-render] Delegating render to Modal.com for session ${videoId}`);
     await job.updateProgress(5);
 
@@ -91,22 +92,18 @@ export async function videoRenderJob(job: Job): Promise<void> {
 
     const client = new ModalClient({ tokenId, tokenSecret });
     try {
-      const renderFunc = await client.functions.fromName("pet-pov-video-render", "render");
+      console.log(`[video-render] Looking up Modal function "video-render" / "render"`);
+      const renderFunc = await client.functions.fromName("video-render", "render");
       await job.updateProgress(15);
-      
-      const result = await renderFunc.remote([], { 
-        video_id: videoId, 
-        narration_id: narrationId 
-      });
+
+      console.log(`[video-render] Calling Modal function...`);
+      const result = await renderFunc.remote([], { video_id: videoId, narration_id: narrationId });
 
       console.log(`[video-render] Modal.com render successful:`, result);
       await job.updateProgress(100);
       return;
     } catch (error) {
       console.error(`[video-render] Modal.com delegation failed:`, error);
-      // Fall through to local rendering if delegation fails? 
-      // Actually, if the user explicitly wants Modal, we should probably fail if it fails,
-      // or we could fallback. For now, let's fail to avoid unexpected costs/behavior.
       throw error;
     } finally {
       client.close();
