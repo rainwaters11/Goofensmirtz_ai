@@ -3,6 +3,8 @@ import cors from "cors";
 import { uploadRouter } from "./routes/upload.js";
 import { processRouter } from "./routes/process.js";
 import { sessionsRouter } from "./routes/sessions.js";
+import { petsRouter } from "./routes/pets.js";
+import { manusRouter } from "./routes/manus.js";
 
 const app = express();
 const PORT = process.env["PORT"] ?? 4000;
@@ -21,6 +23,10 @@ app.use("/api/upload", uploadRouter);
 app.use("/api/process", processRouter);
 // Session detail, insights, recap, voice, ask-my-pet
 app.use("/api/sessions", sessionsRouter);
+// Pet management — avatar generation pipeline
+app.use("/api/pets", petsRouter);
+// Manus project creation
+app.use("/api/manus", manusRouter);
 
 // ─── Error handler ────────────────────────────────────────────────────────────
 app.use(
