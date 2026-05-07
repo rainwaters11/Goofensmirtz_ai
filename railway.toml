@@ -10,3 +10,8 @@ start = "pnpm --filter @pet-pov/api start"
 root = "."
 build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/web build"
 start = "pnpm --filter @pet-pov/web start"
+
+[services.worker]
+root = "."
+build = "pnpm install && pnpm --filter ./packages/** build && pnpm --filter @pet-pov/worker build"
+start = "pnpm --filter @pet-pov/worker start"
