@@ -2,6 +2,12 @@ import ffmpeg from "fluent-ffmpeg";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+// Honor FFMPEG_PATH env var so constrained environments (Modal, Railway, Docker)
+// can point to a specific binary rather than relying on $PATH.
+if (process.env["FFMPEG_PATH"]) {
+  ffmpeg.setFfmpegPath(process.env["FFMPEG_PATH"]);
+}
+
 export interface ExtractedFrame {
   /** Absolute path to the extracted JPEG file */
   filePath: string;
@@ -83,6 +89,8 @@ export async function extractFrames(
 
 /**
  * Merge a video file with an audio track to produce a final output video.
+ * The output duration matches the video (shortest flag), so a long voiceover
+ * won't extend beyond the original footage.
  *
  * @param videoPath - Path to the silent or original video
  * @param audioPath - Path to the voiceover audio file (MP3/WAV)
@@ -93,11 +101,24 @@ export async function mergeAudioWithVideo(
   audioPath: string,
   outputPath: string
 ): Promise<void> {
-  // TODO: Implement audio/video merge with FFmpeg
-  // - Map the video stream from videoPath
-  // - Map the audio stream from audioPath
-  // - Ensure shortest flag so output matches video duration
-  throw new Error(
-    `mergeAudioWithVideo not yet implemented — video: ${videoPath}, audio: ${audioPath}, output: ${outputPath}`
-  );
+  await new Promise<void>((resolve, reject) => {
+    ffmpeg()
+      .input(videoPath)
+      .input(audioPath)
+      .outputOptions([
+        "-map 0:v:0",   // video stream from first input
+        "-map 1:a:0",   // audio stream from second input
+        "-c:v copy",    // copy video codec — no re-encode, fast
+        "-c:a aac",     // encode audio to AAC for broad MP4 compatibility
+        "-b:a 192k",
+        "-shortest",    // clip to the shorter of video/audio
+        "-movflags +faststart", // place moov atom at front for streaming
+      ])
+      .output(outputPath)
+      .on("end", () => resolve())
+      .on("error", (err: Error) =>
+        reject(new Error(`mergeAudioWithVideo failed: ${err.message}`))
+      )
+      .run();
+  });
 }
