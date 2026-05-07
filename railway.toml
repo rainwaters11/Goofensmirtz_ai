@@ -1,17 +1,8 @@
 [project]
 name = "pet-pov-ai"
 
-[services.api]
-root = "."
-dockerfile = "apps/api/Dockerfile"
-start = "pnpm --filter @pet-pov/api start"
+[build]
+buildCommand = "pnpm install --frozen-lockfile && pnpm --filter './packages/**' build && pnpm --filter @pet-pov/worker build"
 
-[services.web]
-root = "."
-dockerfile = "apps/web/Dockerfile"
-start = "pnpm --filter @pet-pov/web start"
-
-[services.worker]
-root = "."
-dockerfile = "apps/worker/Dockerfile"
-start = "pnpm --filter @pet-pov/worker start"
+[deploy]
+startCommand = "pnpm --filter @pet-pov/worker start"
